@@ -158,6 +158,60 @@ fn render_expr(ctx : RenderContext, expr : Expr) -> Unit {
       }
       ctx.write(")")
     }
+    InSubquery(expr, sub_stmt) => {
+      render_expr(ctx, expr)
+      ctx.write(" IN (")
+      render_select_body(ctx, sub_stmt)
+      ctx.write(")")
+    }
+    NotInSubquery(expr, sub_stmt) => {
+      render_expr(ctx, expr)
+      ctx.write(" NOT IN (")
+      render_select_body(ctx, sub_stmt)
+      ctx.write(")")
+    }
+    Subquery(sub_stmt) => {
+      ctx.write("(")
+      render_select_body(ctx, sub_stmt)
+      ctx.write(")")
+    }
+    WindowFunc(func_call, win_spec) => {
+      ctx.write(validate_func_name(func_call.name))
+      ctx.write("(")
+      for i, arg in func_call.args {
+        if i > 0 {
+          ctx.write(", ")
+        }
+        render_expr(ctx, arg)
+      }
+      ctx.write(") OVER (")
+      if not(win_spec.partition_by.is_empty()) {
+        ctx.write("PARTITION BY ")
+        for i, expr in win_spec.partition_by {
+          if i > 0 {
+            ctx.write(", ")
+          }
+          render_expr(ctx, expr)
+        }
+      }
+      if not(win_spec.order_by.is_empty()) {
+        if not(win_spec.partition_by.is_empty()) {
+          ctx.write(" ")
+        }
+        ctx.write("ORDER BY ")
+        for i, item in win_spec.order_by {
+          if i > 0 {
+            ctx.write(", ")
+          }
+          render_expr(ctx, item.expr)
+          match item.order {
+            Asc => ctx.write(" ASC")
+            Desc => ctx.write(" DESC")
+          }
+        }
+      }
+      ctx.write(")")
+    }
   }
 }
 
@@ -174,6 +228,12 @@ fn render_table_ref(ctx : RenderContext, table : TableRef) -> Unit {
       ctx.write_identifier(schema)
       ctx.write(".")
       ctx.write_identifier(name)
+    }
+    SubQuery(sub_stmt, als) => {
+      ctx.write("(")
+      render_select_body(ctx, sub_stmt)
+      ctx.write(") AS ")
+      ctx.write_identifier(als)
     }
   }
 }
@@ -206,9 +266,8 @@ fn join_type_to_sql(jt : JoinType) -> String {
   }
 }
 
-/// Render a SELECT statement to a CompiledQuery
-pub fn render_select(stmt : SelectStatement) -> CompiledQuery {
-  let ctx = RenderContext::new()
+/// Render the body of a SELECT statement (without CTEs) into a context
+fn render_select_body(ctx : RenderContext, stmt : SelectStatement) -> Unit {
   ctx.write("SELECT ")
   if stmt.distinct {
     ctx.write("DISTINCT ")
@@ -272,6 +331,19 @@ pub fn render_select(stmt : SelectStatement) -> CompiledQuery {
     }
     None => ()
   }
+  // Set operations (UNION, INTERSECT, EXCEPT)
+  for set_op in stmt.set_ops {
+    let keyword = match set_op.kind {
+      Union => " UNION "
+      UnionAll => " UNION ALL "
+      Intersect => " INTERSECT "
+      IntersectAll => " INTERSECT ALL "
+      Except => " EXCEPT "
+      ExceptAll => " EXCEPT ALL "
+    }
+    ctx.write(keyword)
+    render_select_body(ctx, set_op.select)
+  }
   // ORDER BY
   if not(stmt.order_by.is_empty()) {
     ctx.write(" ORDER BY ")
@@ -302,6 +374,26 @@ pub fn render_select(stmt : SelectStatement) -> CompiledQuery {
     }
     None => ()
   }
+}
+
+/// Render a SELECT statement to a CompiledQuery
+pub fn render_select(stmt : SelectStatement) -> CompiledQuery {
+  let ctx = RenderContext::new()
+  // CTEs (WITH clause)
+  if not(stmt.ctes.is_empty()) {
+    ctx.write("WITH ")
+    for i, cte in stmt.ctes {
+      if i > 0 {
+        ctx.write(", ")
+      }
+      ctx.write_identifier(cte.name)
+      ctx.write(" AS (")
+      render_select_body(ctx, cte.query)
+      ctx.write(")")
+    }
+    ctx.write(" ")
+  }
+  render_select_body(ctx, stmt)
   { sql: ctx.to_sql(), params: ctx.params }
 }
 
@@ -335,6 +427,34 @@ pub fn render_insert(stmt : InsertStatement) -> CompiledQuery {
       render_expr(ctx, expr)
     }
     ctx.write(")")
+  }
+  // ON CONFLICT
+  match stmt.on_conflict {
+    Some(oc) => {
+      ctx.write(" ON CONFLICT (")
+      for i, col in oc.columns {
+        if i > 0 {
+          ctx.write(", ")
+        }
+        ctx.write_identifier(col)
+      }
+      ctx.write(")")
+      match oc.action {
+        DoNothing => ctx.write(" DO NOTHING")
+        DoUpdate(assignments) => {
+          ctx.write(" DO UPDATE SET ")
+          for i, assignment in assignments {
+            if i > 0 {
+              ctx.write(", ")
+            }
+            ctx.write_identifier(assignment.0)
+            ctx.write(" = ")
+            render_expr(ctx, assignment.1)
+          }
+        }
+      }
+    }
+    None => ()
   }
   // RETURNING
   if not(stmt.returning.is_empty()) {

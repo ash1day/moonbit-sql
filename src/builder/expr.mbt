@@ -49,3 +49,27 @@ pub fn func(name : String, args : Array[@ast.Expr]) -> @ast.Expr {
 pub fn asterisk() -> @ast.Expr {
   @ast.Expr::Asterisk
 }
+
+/// Create a window function expression
+pub fn window_func(
+  name : String,
+  args : Array[@ast.Expr],
+  partition_by~ : Array[String] = [],
+  order_by~ : Array[(String, @ast.Order)] = []
+) -> @ast.Expr {
+  let partition_exprs = partition_by.map(
+    fn(c) { @ast.Expr::Column(@ast.ColumnRef::Column(c)) },
+  )
+  let order_items = order_by.map(
+    fn(item) {
+      ({
+        expr: @ast.Expr::Column(@ast.ColumnRef::Column(item.0)),
+        order: item.1,
+      } : @ast.OrderByItem)
+    },
+  )
+  @ast.Expr::WindowFunc(
+    { name, args },
+    { partition_by: partition_exprs, order_by: order_items },
+  )
+}

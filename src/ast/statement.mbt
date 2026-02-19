@@ -10,6 +10,8 @@ pub(all) struct SelectStatement {
   order_by : Array[OrderByItem]
   limit : Expr?
   offset : Expr?
+  set_ops : Array[SetOperation]
+  ctes : Array[CTE]
 } derive(Show, Eq)
 
 /// Create an empty SelectStatement
@@ -25,6 +27,8 @@ pub fn SelectStatement::new() -> SelectStatement {
     order_by: [],
     limit: None,
     offset: None,
+    set_ops: [],
+    ctes: [],
   }
 }
 
@@ -34,6 +38,7 @@ pub(all) struct InsertStatement {
   columns : Array[String]
   values : Array[Array[Expr]]
   returning : Array[SelectItem]
+  on_conflict : OnConflict?
 } derive(Show, Eq)
 
 /// UPDATE statement AST

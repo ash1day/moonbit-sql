@@ -72,3 +72,13 @@ pub fn Expr::between(self : Expr, low : Expr, high : Expr) -> Expr {
 pub fn Expr::not_between(self : Expr, low : Expr, high : Expr) -> Expr {
   NotBetween(self, low, high)
 }
+
+/// IN subquery check
+pub fn Expr::in_subquery(self : Expr, sub : SelectStatement) -> Expr {
+  InSubquery(self, sub)
+}
+
+/// NOT IN subquery check
+pub fn Expr::not_in_subquery(self : Expr, sub : SelectStatement) -> Expr {
+  NotInSubquery(self, sub)
+}

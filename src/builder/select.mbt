@@ -10,6 +10,8 @@ pub struct SelectBuilder {
   order_by_ : Array[@ast.OrderByItem]
   mut limit_ : Int?
   mut offset_ : Int?
+  set_ops_ : Array[@ast.SetOperation]
+  ctes_ : Array[@ast.CTE]
 }
 
 /// Create a new SelectBuilder
@@ -25,6 +27,8 @@ pub fn select() -> SelectBuilder {
     order_by_: [],
     limit_: None,
     offset_: None,
+    set_ops_: [],
+    ctes_: [],
   }
 }
 
@@ -331,9 +335,91 @@ pub fn SelectBuilder::offset(self : SelectBuilder, n : Int) -> SelectBuilder {
   self
 }
 
-/// Build the SelectBuilder into a CompiledQuery
-pub fn SelectBuilder::build(self : SelectBuilder) -> @ast.CompiledQuery {
-  let stmt : @ast.SelectStatement = {
+/// Add a FROM subquery from a SelectBuilder
+pub fn SelectBuilder::from_sub(
+  self : SelectBuilder,
+  sub : SelectBuilder,
+  als : String
+) -> SelectBuilder {
+  let sub_stmt = sub.build_statement()
+  self.from_ = Some(@ast.TableRef::SubQuery(sub_stmt, als))
+  self
+}
+
+/// Add a CTE (WITH clause)
+pub fn SelectBuilder::with_(
+  self : SelectBuilder,
+  name : String,
+  sub : SelectBuilder
+) -> SelectBuilder {
+  let sub_stmt = sub.build_statement()
+  self.ctes_.push({ name, query: sub_stmt })
+  self
+}
+
+/// Add a UNION
+pub fn SelectBuilder::union(
+  self : SelectBuilder,
+  other : SelectBuilder
+) -> SelectBuilder {
+  let other_stmt = other.build_statement()
+  self.set_ops_.push({ kind: @ast.SetOpKind::Union, select: other_stmt })
+  self
+}
+
+/// Add a UNION ALL
+pub fn SelectBuilder::union_all(
+  self : SelectBuilder,
+  other : SelectBuilder
+) -> SelectBuilder {
+  let other_stmt = other.build_statement()
+  self.set_ops_.push({ kind: @ast.SetOpKind::UnionAll, select: other_stmt })
+  self
+}
+
+/// Add an INTERSECT
+pub fn SelectBuilder::intersect(
+  self : SelectBuilder,
+  other : SelectBuilder
+) -> SelectBuilder {
+  let other_stmt = other.build_statement()
+  self.set_ops_.push({ kind: @ast.SetOpKind::Intersect, select: other_stmt })
+  self
+}
+
+/// Add an INTERSECT ALL
+pub fn SelectBuilder::intersect_all(
+  self : SelectBuilder,
+  other : SelectBuilder
+) -> SelectBuilder {
+  let other_stmt = other.build_statement()
+  self.set_ops_.push({ kind: @ast.SetOpKind::IntersectAll, select: other_stmt })
+  self
+}
+
+/// Add an EXCEPT
+pub fn SelectBuilder::except_(
+  self : SelectBuilder,
+  other : SelectBuilder
+) -> SelectBuilder {
+  let other_stmt = other.build_statement()
+  self.set_ops_.push({ kind: @ast.SetOpKind::Except, select: other_stmt })
+  self
+}
+
+/// Add an EXCEPT ALL
+pub fn SelectBuilder::except_all(
+  self : SelectBuilder,
+  other : SelectBuilder
+) -> SelectBuilder {
+  let other_stmt = other.build_statement()
+  self.set_ops_.push({ kind: @ast.SetOpKind::ExceptAll, select: other_stmt })
+  self
+}
+
+/// Build the internal SelectStatement (for use by subqueries, CTEs, etc.)
+pub fn SelectBuilder::build_statement(self : SelectBuilder) -> @ast.SelectStatement {
+  {
     distinct: self.distinct_,
     columns: self.columns,
     from: self.from_,
@@ -350,6 +436,13 @@ pub fn SelectBuilder::build(self : SelectBuilder) -> @ast.CompiledQuery {
       Some(n) => Some(@ast.Expr::Value(@ast.Value::Int(n)))
       None => None
     },
+    set_ops: self.set_ops_,
+    ctes: self.ctes_,
   }
+}
+
+/// Build the SelectBuilder into a CompiledQuery
+pub fn SelectBuilder::build(self : SelectBuilder) -> @ast.CompiledQuery {
+  let stmt = self.build_statement()
   @ast.render_select(stmt)
 }

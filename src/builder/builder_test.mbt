@@ -1707,3 +1707,565 @@ test "cross join with alias" {
     "SELECT * FROM \"colors\" CROSS JOIN \"sizes\" AS \"s\"",
   )
 }
+
+// ========================================================
+// Subquery: FROM subquery
+// ========================================================
+
+test "select from subquery" {
+  let sub = select().columns(["id"]).from("users").where_(col("active").eq(val_bool(true)))
+  let q = select().all().from_sub(sub, "sub").build()
+  assert_eq(
+    q.sql,
+    "SELECT * FROM (SELECT \"id\" FROM \"users\" WHERE (\"active\" = $1)) AS \"sub\"",
+  )
+  assert_eq(q.params, [@ast.Value::Bool(true)])
+}
+
+test "select from subquery with where" {
+  let sub = select().columns(["id", "name"]).from("users")
+  let q = select()
+    .all()
+    .from_sub(sub, "u")
+    .where_(col("id").gt(val_int(10)))
+    .build()
+  assert_eq(
+    q.sql,
+    "SELECT * FROM (SELECT \"id\", \"name\" FROM \"users\") AS \"u\" WHERE (\"id\" > $1)",
+  )
+  assert_eq(q.params, [@ast.Value::Int(10)])
+}
+
+test "select from subquery with join" {
+  let sub = select().columns(["user_id", "total"]).from("orders").where_(col("total").gt(val_int(100)))
+  let q = select()
+    .all()
+    .from_sub(sub, "o")
+    .join(
+      "users",
+      table_col("o", "user_id").eq(table_col("users", "id")),
+    )
+    .build()
+  assert_eq(
+    q.sql,
+    "SELECT * FROM (SELECT \"user_id\", \"total\" FROM \"orders\" WHERE (\"total\" > $1)) AS \"o\" INNER JOIN \"users\" ON (\"o\".\"user_id\" = \"users\".\"id\")",
+  )
+  assert_eq(q.params, [@ast.Value::Int(100)])
+}
+
+// ========================================================
+// Subquery: IN subquery
+// ========================================================
+
+test "select with in subquery" {
+  let sub = select().column("id").from("users").where_(col("active").eq(val_bool(true)))
+  let sub_stmt = sub.build_statement()
+  let q = select()
+    .all()
+    .from("orders")
+    .where_(col("user_id").in_subquery(sub_stmt))
+    .build()
+  assert_eq(
+    q.sql,
+    "SELECT * FROM \"orders\" WHERE \"user_id\" IN (SELECT \"id\" FROM \"users\" WHERE (\"active\" = $1))",
+  )
+  assert_eq(q.params, [@ast.Value::Bool(true)])
+}
+
+test "select with not in subquery" {
+  let sub = select().column("id").from("banned_users")
+  let sub_stmt = sub.build_statement()
+  let q = select()
+    .all()
+    .from("users")
+    .where_(col("id").not_in_subquery(sub_stmt))
+    .build()
+  assert_eq(
+    q.sql,
+    "SELECT * FROM \"users\" WHERE \"id\" NOT IN (SELECT \"id\" FROM \"banned_users\")",
+  )
+  assert_eq(q.params, [])
+}
+
+test "select with in subquery and other conditions" {
+  let sub = select().column("user_id").from("orders").where_(col("total").gt(val_int(1000)))
+  let sub_stmt = sub.build_statement()
+  let q = select()
+    .all()
+    .from("users")
+    .where_(col("id").in_subquery(sub_stmt))
+    .where_(col("active").eq(val_bool(true)))
+    .build()
+  assert_eq(
+    q.sql,
+    "SELECT * FROM \"users\" WHERE (\"id\" IN (SELECT \"user_id\" FROM \"orders\" WHERE (\"total\" > $1)) AND (\"active\" = $2))",
+  )
+  assert_eq(q.params, [@ast.Value::Int(1000), @ast.Value::Bool(true)])
+}
+
+// ========================================================
+// CTE (WITH)
+// ========================================================
+
+test "select with CTE" {
+  let cte = select().columns(["id", "name"]).from("users").where_(col("active").eq(val_bool(true)))
+  let q = select()
+    .with_("active_users", cte)
+    .all()
+    .from("active_users")
+    .build()
+  assert_eq(
+    q.sql,
+    "WITH \"active_users\" AS (SELECT \"id\", \"name\" FROM \"users\" WHERE (\"active\" = $1)) SELECT * FROM \"active_users\"",
+  )
+  assert_eq(q.params, [@ast.Value::Bool(true)])
+}
+
+test "select with multiple CTEs" {
+  let cte1 = select().columns(["id", "name"]).from("users").where_(col("active").eq(val_bool(true)))
+  let cte2 = select().columns(["user_id", "total"]).from("orders").where_(col("total").gt(val_int(100)))
+  let q = select()
+    .with_("active_users", cte1)
+    .with_("big_orders", cte2)
+    .all()
+    .from("active_users")
+    .join(
+      "big_orders",
+      table_col("active_users", "id").eq(table_col("big_orders", "user_id")),
+    )
+    .build()
+  assert_eq(
+    q.sql,
+    "WITH \"active_users\" AS (SELECT \"id\", \"name\" FROM \"users\" WHERE (\"active\" = $1)), \"big_orders\" AS (SELECT \"user_id\", \"total\" FROM \"orders\" WHERE (\"total\" > $2)) SELECT * FROM \"active_users\" INNER JOIN \"big_orders\" ON (\"active_users\".\"id\" = \"big_orders\".\"user_id\")",
+  )
+  assert_eq(q.params, [@ast.Value::Bool(true), @ast.Value::Int(100)])
+}
+
+test "select with CTE and where" {
+  let cte = select().column("id").from("users")
+  let q = select()
+    .with_("all_ids", cte)
+    .all()
+    .from("all_ids")
+    .where_(col("id").gt(val_int(5)))
+    .build()
+  assert_eq(
+    q.sql,
+    "WITH \"all_ids\" AS (SELECT \"id\" FROM \"users\") SELECT * FROM \"all_ids\" WHERE (\"id\" > $1)",
+  )
+  assert_eq(q.params, [@ast.Value::Int(5)])
+}
+
+// ========================================================
+// UNION / INTERSECT / EXCEPT
+// ========================================================
+
+test "select union" {
+  let q = select()
+    .all()
+    .from("table_a")
+    .union(select().all().from("table_b"))
+    .build()
+  assert_eq(
+    q.sql,
+    "SELECT * FROM \"table_a\" UNION SELECT * FROM \"table_b\"",
+  )
+  assert_eq(q.params, [])
+}
+
+test "select union all" {
+  let q = select()
+    .all()
+    .from("table_a")
+    .union_all(select().all().from("table_b"))
+    .build()
+  assert_eq(
+    q.sql,
+    "SELECT * FROM \"table_a\" UNION ALL SELECT * FROM \"table_b\"",
+  )
+  assert_eq(q.params, [])
+}
+
+test "select intersect" {
+  let q = select()
+    .all()
+    .from("table_a")
+    .intersect(select().all().from("table_b"))
+    .build()
+  assert_eq(
+    q.sql,
+    "SELECT * FROM \"table_a\" INTERSECT SELECT * FROM \"table_b\"",
+  )
+  assert_eq(q.params, [])
+}
+
+test "select intersect all" {
+  let q = select()
+    .all()
+    .from("table_a")
+    .intersect_all(select().all().from("table_b"))
+    .build()
+  assert_eq(
+    q.sql,
+    "SELECT * FROM \"table_a\" INTERSECT ALL SELECT * FROM \"table_b\"",
+  )
+  assert_eq(q.params, [])
+}
+
+test "select except" {
+  let q = select()
+    .all()
+    .from("table_a")
+    .except_(select().all().from("table_b"))
+    .build()
+  assert_eq(
+    q.sql,
+    "SELECT * FROM \"table_a\" EXCEPT SELECT * FROM \"table_b\"",
+  )
+  assert_eq(q.params, [])
+}
+
+test "select except all" {
+  let q = select()
+    .all()
+    .from("table_a")
+    .except_all(select().all().from("table_b"))
+    .build()
+  assert_eq(
+    q.sql,
+    "SELECT * FROM \"table_a\" EXCEPT ALL SELECT * FROM \"table_b\"",
+  )
+  assert_eq(q.params, [])
+}
+
+test "select union with params" {
+  let q = select()
+    .all()
+    .from("users")
+    .where_(col("role").eq(val_str("admin")))
+    .union(
+      select()
+        .all()
+        .from("users")
+        .where_(col("role").eq(val_str("mod"))),
+    )
+    .build()
+  assert_eq(
+    q.sql,
+    "SELECT * FROM \"users\" WHERE (\"role\" = $1) UNION SELECT * FROM \"users\" WHERE (\"role\" = $2)",
+  )
+  assert_eq(
+    q.params,
+    [@ast.Value::String("admin"), @ast.Value::String("mod")],
+  )
+}
+
+test "select union with order by and limit" {
+  let q = select()
+    .all()
+    .from("table_a")
+    .union(select().all().from("table_b"))
+    .order_by("id", @ast.Asc)
+    .limit(10)
+    .build()
+  assert_eq(
+    q.sql,
+    "SELECT * FROM \"table_a\" UNION SELECT * FROM \"table_b\" ORDER BY \"id\" ASC LIMIT $1",
+  )
+  assert_eq(q.params, [@ast.Value::Int(10)])
+}
+
+test "select multiple unions" {
+  let q = select()
+    .all()
+    .from("table_a")
+    .union(select().all().from("table_b"))
+    .union(select().all().from("table_c"))
+    .build()
+  assert_eq(
+    q.sql,
+    "SELECT * FROM \"table_a\" UNION SELECT * FROM \"table_b\" UNION SELECT * FROM \"table_c\"",
+  )
+  assert_eq(q.params, [])
+}
+
+// ========================================================
+// Upsert (INSERT ON CONFLICT)
+// ========================================================
+
+test "insert on conflict do nothing" {
+  let q = insert_into("users")
+    .columns(["id", "name"])
+    .values([val_int(1), val_str("Alice")])
+    .on_conflict_do_nothing(["id"])
+    .build()
+  assert_eq(
+    q.sql,
+    "INSERT INTO \"users\" (\"id\", \"name\") VALUES ($1, $2) ON CONFLICT (\"id\") DO NOTHING",
+  )
+  assert_eq(
+    q.params,
+    [@ast.Value::Int(1), @ast.Value::String("Alice")],
+  )
+}
+
+test "insert on conflict do update" {
+  let q = insert_into("users")
+    .columns(["id", "name", "email"])
+    .values([val_int(1), val_str("Alice"), val_str("alice@example.com")])
+    .on_conflict_do_update(
+      ["id"],
+      [
+        ("name", table_col("excluded", "name")),
+        ("email", table_col("excluded", "email")),
+      ],
+    )
+    .build()
+  assert_eq(
+    q.sql,
+    "INSERT INTO \"users\" (\"id\", \"name\", \"email\") VALUES ($1, $2, $3) ON CONFLICT (\"id\") DO UPDATE SET \"name\" = \"excluded\".\"name\", \"email\" = \"excluded\".\"email\"",
+  )
+  assert_eq(
+    q.params,
+    [
+      @ast.Value::Int(1),
+      @ast.Value::String("Alice"),
+      @ast.Value::String("alice@example.com"),
+    ],
+  )
+}
+
+test "insert on conflict do update with value" {
+  let q = insert_into("counters")
+    .columns(["key", "value"])
+    .values([val_str("hits"), val_int(1)])
+    .on_conflict_do_update(
+      ["key"],
+      [
+        ("value", @ast.Expr::Binary(table_col("counters", "value"), @ast.BinOp::Add, val_int(1))),
+      ],
+    )
+    .build()
+  assert_eq(
+    q.sql,
+    "INSERT INTO \"counters\" (\"key\", \"value\") VALUES ($1, $2) ON CONFLICT (\"key\") DO UPDATE SET \"value\" = (\"counters\".\"value\" + $3)",
+  )
+  assert_eq(
+    q.params,
+    [
+      @ast.Value::String("hits"),
+      @ast.Value::Int(1),
+      @ast.Value::Int(1),
+    ],
+  )
+}
+
+test "insert on conflict multiple columns" {
+  let q = insert_into("user_roles")
+    .columns(["user_id", "role_id", "granted_at"])
+    .values([val_int(1), val_int(2), val_str("2024-01-01")])
+    .on_conflict_do_nothing(["user_id", "role_id"])
+    .build()
+  assert_eq(
+    q.sql,
+    "INSERT INTO \"user_roles\" (\"user_id\", \"role_id\", \"granted_at\") VALUES ($1, $2, $3) ON CONFLICT (\"user_id\", \"role_id\") DO NOTHING",
+  )
+  assert_eq(
+    q.params,
+    [
+      @ast.Value::Int(1),
+      @ast.Value::Int(2),
+      @ast.Value::String("2024-01-01"),
+    ],
+  )
+}
+
+test "insert on conflict do update with returning" {
+  let q = insert_into("users")
+    .columns(["id", "name"])
+    .values([val_int(1), val_str("Alice")])
+    .on_conflict_do_update(
+      ["id"],
+      [("name", table_col("excluded", "name"))],
+    )
+    .returning(["id", "name"])
+    .build()
+  assert_eq(
+    q.sql,
+    "INSERT INTO \"users\" (\"id\", \"name\") VALUES ($1, $2) ON CONFLICT (\"id\") DO UPDATE SET \"name\" = \"excluded\".\"name\" RETURNING \"id\", \"name\"",
+  )
+  assert_eq(
+    q.params,
+    [@ast.Value::Int(1), @ast.Value::String("Alice")],
+  )
+}
+
+// ========================================================
+// Window Functions
+// ========================================================
+
+test "select with row_number window function" {
+  let q = select()
+    .expr_as(
+      window_func(
+        "ROW_NUMBER",
+        [],
+        partition_by=["dept"],
+        order_by=[("salary", @ast.Desc)],
+      ),
+      "rank",
+    )
+    .from("employees")
+    .build()
+  assert_eq(
+    q.sql,
+    "SELECT ROW_NUMBER() OVER (PARTITION BY \"dept\" ORDER BY \"salary\" DESC) AS \"rank\" FROM \"employees\"",
+  )
+  assert_eq(q.params, [])
+}
+
+test "select with rank window function" {
+  let q = select()
+    .column("name")
+    .expr_as(
+      window_func(
+        "RANK",
+        [],
+        order_by=[("score", @ast.Desc)],
+      ),
+      "rank",
+    )
+    .from("players")
+    .build()
+  assert_eq(
+    q.sql,
+    "SELECT \"name\", RANK() OVER (ORDER BY \"score\" DESC) AS \"rank\" FROM \"players\"",
+  )
+  assert_eq(q.params, [])
+}
+
+test "select with sum window function" {
+  let q = select()
+    .column("month")
+    .column("revenue")
+    .expr_as(
+      window_func(
+        "SUM",
+        [col("revenue")],
+        partition_by=["year"],
+        order_by=[("month", @ast.Asc)],
+      ),
+      "running_total",
+    )
+    .from("sales")
+    .build()
+  assert_eq(
+    q.sql,
+    "SELECT \"month\", \"revenue\", SUM(\"revenue\") OVER (PARTITION BY \"year\" ORDER BY \"month\" ASC) AS \"running_total\" FROM \"sales\"",
+  )
+  assert_eq(q.params, [])
+}
+
+test "select with window function partition only" {
+  let q = select()
+    .expr_as(
+      window_func(
+        "COUNT",
+        [asterisk()],
+        partition_by=["dept"],
+      ),
+      "dept_count",
+    )
+    .from("employees")
+    .build()
+  assert_eq(
+    q.sql,
+    "SELECT COUNT(*) OVER (PARTITION BY \"dept\") AS \"dept_count\" FROM \"employees\"",
+  )
+  assert_eq(q.params, [])
+}
+
+test "select with window function order only" {
+  let q = select()
+    .expr_as(
+      window_func(
+        "ROW_NUMBER",
+        [],
+        order_by=[("id", @ast.Asc)],
+      ),
+      "row_num",
+    )
+    .from("users")
+    .build()
+  assert_eq(
+    q.sql,
+    "SELECT ROW_NUMBER() OVER (ORDER BY \"id\" ASC) AS \"row_num\" FROM \"users\"",
+  )
+  assert_eq(q.params, [])
+}
+
+test "select with window function multiple partition and order" {
+  let q = select()
+    .expr_as(
+      window_func(
+        "ROW_NUMBER",
+        [],
+        partition_by=["dept", "team"],
+        order_by=[("salary", @ast.Desc), ("name", @ast.Asc)],
+      ),
+      "rank",
+    )
+    .from("employees")
+    .build()
+  assert_eq(
+    q.sql,
+    "SELECT ROW_NUMBER() OVER (PARTITION BY \"dept\", \"team\" ORDER BY \"salary\" DESC, \"name\" ASC) AS \"rank\" FROM \"employees\"",
+  )
+  assert_eq(q.params, [])
+}
+
+// ========================================================
+// Combined: CTE with UNION
+// ========================================================
+
+test "CTE with union inside" {
+  let cte_query = select()
+    .column("id")
+    .from("active_users")
+    .union(select().column("id").from("premium_users"))
+  let q = select()
+    .with_("all_special_users", cte_query)
+    .all()
+    .from("all_special_users")
+    .build()
+  assert_eq(
+    q.sql,
+    "WITH \"all_special_users\" AS (SELECT \"id\" FROM \"active_users\" UNION SELECT \"id\" FROM \"premium_users\") SELECT * FROM \"all_special_users\"",
+  )
+  assert_eq(q.params, [])
+}
+
+// ========================================================
+// Combined: Subquery in WHERE with UNION
+// ========================================================
+
+test "subquery with params in nested context" {
+  let sub = select().column("id").from("users").where_(col("age").gt(val_int(18)))
+  let sub_stmt = sub.build_statement()
+  let q = select()
+    .all()
+    .from("orders")
+    .where_(col("user_id").in_subquery(sub_stmt))
+    .where_(col("total").gt(val_int(50)))
+    .order_by("total", @ast.Desc)
+    .limit(10)
+    .build()
+  assert_eq(
+    q.sql,
+    "SELECT * FROM \"orders\" WHERE (\"user_id\" IN (SELECT \"id\" FROM \"users\" WHERE (\"age\" > $1)) AND (\"total\" > $2)) ORDER BY \"total\" DESC LIMIT $3",
+  )
+  assert_eq(
+    q.params,
+    [@ast.Value::Int(18), @ast.Value::Int(50), @ast.Value::Int(10)],
+  )
+}

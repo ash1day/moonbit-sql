@@ -53,6 +53,10 @@ pub(all) enum Expr {
   NotBetween(Expr, Expr, Expr)
   Func(FuncCall)
   Asterisk
+  InSubquery(Expr, SelectStatement)
+  NotInSubquery(Expr, SelectStatement)
+  Subquery(SelectStatement)
+  WindowFunc(FuncCall, WindowSpec)
 } derive(Show, Eq)
 
 /// SQL function call
@@ -69,6 +73,8 @@ pub(all) enum TableRef {
   TableAlias(String, String)
   /// Schema-qualified: "public"."users"
   SchemaTable(String, String)
+  /// Subquery with alias: (SELECT ...) AS "alias"
+  SubQuery(SelectStatement, String)
 } derive(Show, Eq)
 
 /// SELECT target item
@@ -109,6 +115,46 @@ pub(all) enum Order {
 pub(all) struct OrderByItem {
   expr : Expr
   order : Order
+} derive(Show, Eq)
+
+/// Window specification for window functions
+pub(all) struct WindowSpec {
+  partition_by : Array[Expr]
+  order_by : Array[OrderByItem]
+} derive(Show, Eq)
+
+/// Set operation type
+pub(all) enum SetOpKind {
+  Union
+  UnionAll
+  Intersect
+  IntersectAll
+  Except
+  ExceptAll
+} derive(Show, Eq)
+
+/// Set operation: UNION/INTERSECT/EXCEPT with another SELECT
+pub(all) struct SetOperation {
+  kind : SetOpKind
+  select : SelectStatement
+} derive(Show, Eq)
+
+/// Common Table Expression (CTE)
+pub(all) struct CTE {
+  name : String
+  query : SelectStatement
+} derive(Show, Eq)
+
+/// ON CONFLICT action for upsert
+pub(all) enum OnConflictAction {
+  DoNothing
+  DoUpdate(Array[(String, Expr)])
+} derive(Show, Eq)
+
+/// ON CONFLICT clause for INSERT
+pub(all) struct OnConflict {
+  columns : Array[String]
+  action : OnConflictAction
 } derive(Show, Eq)
 
 /// Compiled query result: SQL string + parameter values

@@ -1,5 +1,6 @@
 /// SELECT statement AST
 pub(all) struct SelectStatement {
+  distinct : Bool
   columns : Array[SelectItem]
   from : TableRef?
   joins : Array[JoinClause]
@@ -14,6 +15,7 @@ pub(all) struct SelectStatement {
 /// Create an empty SelectStatement
 pub fn SelectStatement::new() -> SelectStatement {
   {
+    distinct: false,
     columns: [],
     from: None,
     joins: [],

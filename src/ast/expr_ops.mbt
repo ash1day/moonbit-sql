@@ -57,3 +57,18 @@ pub fn Expr::is_not_null(self : Expr) -> Expr {
 pub fn Expr::in_list(self : Expr, values : Array[Expr]) -> Expr {
   InList(self, values)
 }
+
+/// NOT IN list check
+pub fn Expr::not_in_list(self : Expr, values : Array[Expr]) -> Expr {
+  NotInList(self, values)
+}
+
+/// BETWEEN check
+pub fn Expr::between(self : Expr, low : Expr, high : Expr) -> Expr {
+  Between(self, low, high)
+}
+
+/// NOT BETWEEN check
+pub fn Expr::not_between(self : Expr, low : Expr, high : Expr) -> Expr {
+  NotBetween(self, low, high)
+}

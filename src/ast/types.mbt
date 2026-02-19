@@ -48,7 +48,9 @@ pub(all) enum Expr {
   IsNull(Expr)
   IsNotNull(Expr)
   InList(Expr, Array[Expr])
+  NotInList(Expr, Array[Expr])
   Between(Expr, Expr, Expr)
+  NotBetween(Expr, Expr, Expr)
   Func(FuncCall)
   Asterisk
 } derive(Show, Eq)

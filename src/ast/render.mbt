@@ -95,9 +95,27 @@ fn render_expr(ctx : RenderContext, expr : Expr) -> Unit {
       }
       ctx.write(")")
     }
+    NotInList(expr, values) => {
+      render_expr(ctx, expr)
+      ctx.write(" NOT IN (")
+      for i, v in values {
+        if i > 0 {
+          ctx.write(", ")
+        }
+        render_expr(ctx, v)
+      }
+      ctx.write(")")
+    }
     Between(expr, low, high) => {
       render_expr(ctx, expr)
       ctx.write(" BETWEEN ")
+      render_expr(ctx, low)
+      ctx.write(" AND ")
+      render_expr(ctx, high)
+    }
+    NotBetween(expr, low, high) => {
+      render_expr(ctx, expr)
+      ctx.write(" NOT BETWEEN ")
       render_expr(ctx, low)
       ctx.write(" AND ")
       render_expr(ctx, high)
@@ -165,6 +183,9 @@ fn join_type_to_sql(jt : JoinType) -> String {
 pub fn render_select(stmt : SelectStatement) -> CompiledQuery {
   let ctx = RenderContext::new()
   ctx.write("SELECT ")
+  if stmt.distinct {
+    ctx.write("DISTINCT ")
+  }
   // Columns
   if stmt.columns.is_empty() {
     ctx.write("*")

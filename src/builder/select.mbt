@@ -1,5 +1,6 @@
 /// Builder for SELECT statements
 pub struct SelectBuilder {
+  mut distinct_ : Bool
   columns : Array[@ast.SelectItem]
   mut from_ : @ast.TableRef?
   joins_ : Array[@ast.JoinClause]
@@ -14,6 +15,7 @@ pub struct SelectBuilder {
 /// Create a new SelectBuilder
 pub fn select() -> SelectBuilder {
   {
+    distinct_: false,
     columns: [],
     from_: None,
     joins_: [],
@@ -24,6 +26,12 @@ pub fn select() -> SelectBuilder {
     limit_: None,
     offset_: None,
   }
+}
+
+/// Set SELECT DISTINCT
+pub fn SelectBuilder::distinct(self : SelectBuilder) -> SelectBuilder {
+  self.distinct_ = true
+  self
 }
 
 /// Add multiple columns by name
@@ -41,6 +49,31 @@ pub fn SelectBuilder::column(self : SelectBuilder, c : String) -> SelectBuilder 
   self.columns.push(
     @ast.SelectItem::Expr(@ast.Expr::Column(@ast.ColumnRef::Column(c))),
   )
+  self
+}
+
+/// Add a raw expression as a select item
+pub fn SelectBuilder::expr(self : SelectBuilder, e : @ast.Expr) -> SelectBuilder {
+  self.columns.push(@ast.SelectItem::Expr(e))
+  self
+}
+
+/// Add an expression with alias
+pub fn SelectBuilder::expr_as(
+  self : SelectBuilder,
+  e : @ast.Expr,
+  als : String
+) -> SelectBuilder {
+  self.columns.push(@ast.SelectItem::ExprAlias(e, als))
+  self
+}
+
+/// Add table.* as a select item
+pub fn SelectBuilder::table_all_columns(
+  self : SelectBuilder,
+  table : String
+) -> SelectBuilder {
+  self.columns.push(@ast.SelectItem::TableAllColumns(table))
   self
 }
 
@@ -63,6 +96,16 @@ pub fn SelectBuilder::from_as(
   als : String
 ) -> SelectBuilder {
   self.from_ = Some(@ast.TableRef::TableAlias(table, als))
+  self
+}
+
+/// Set the FROM table with schema qualification
+pub fn SelectBuilder::from_schema(
+  self : SelectBuilder,
+  schema : String,
+  table : String
+) -> SelectBuilder {
+  self.from_ = Some(@ast.TableRef::SchemaTable(schema, table))
   self
 }
 
@@ -93,6 +136,53 @@ pub fn SelectBuilder::left_join(
       join_type: @ast.JoinType::Left,
       table: @ast.TableRef::Table(table),
       on,
+    },
+  )
+  self
+}
+
+/// Add a RIGHT JOIN
+pub fn SelectBuilder::right_join(
+  self : SelectBuilder,
+  table : String,
+  on : @ast.Expr
+) -> SelectBuilder {
+  self.joins_.push(
+    {
+      join_type: @ast.JoinType::Right,
+      table: @ast.TableRef::Table(table),
+      on,
+    },
+  )
+  self
+}
+
+/// Add a FULL JOIN
+pub fn SelectBuilder::full_join(
+  self : SelectBuilder,
+  table : String,
+  on : @ast.Expr
+) -> SelectBuilder {
+  self.joins_.push(
+    {
+      join_type: @ast.JoinType::Full,
+      table: @ast.TableRef::Table(table),
+      on,
+    },
+  )
+  self
+}
+
+/// Add a CROSS JOIN
+pub fn SelectBuilder::cross_join(
+  self : SelectBuilder,
+  table : String
+) -> SelectBuilder {
+  self.joins_.push(
+    {
+      join_type: @ast.JoinType::Cross,
+      table: @ast.TableRef::Table(table),
+      on: @ast.Expr::Value(@ast.Value::Bool(true)),
     },
   )
   self
@@ -132,6 +222,19 @@ pub fn SelectBuilder::order_by(
   self
 }
 
+/// Add an ORDER BY clause with table-qualified column
+pub fn SelectBuilder::order_by_table(
+  self : SelectBuilder,
+  table : String,
+  c : String,
+  order : @ast.Order
+) -> SelectBuilder {
+  self.order_by_.push(
+    { expr: @ast.Expr::Column(@ast.ColumnRef::TableColumn(table, c)), order },
+  )
+  self
+}
+
 /// Set LIMIT
 pub fn SelectBuilder::limit(self : SelectBuilder, n : Int) -> SelectBuilder {
   self.limit_ = Some(n)
@@ -147,6 +250,7 @@ pub fn SelectBuilder::offset(self : SelectBuilder, n : Int) -> SelectBuilder {
 /// Build the SelectBuilder into a CompiledQuery
 pub fn SelectBuilder::build(self : SelectBuilder) -> @ast.CompiledQuery {
   let stmt : @ast.SelectStatement = {
+    distinct: self.distinct_,
     columns: self.columns,
     from: self.from_,
     joins: self.joins_,

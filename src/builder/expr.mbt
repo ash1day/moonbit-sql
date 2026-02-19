@@ -25,7 +25,27 @@ pub fn val_bool(v : Bool) -> @ast.Expr {
   @ast.Expr::Value(@ast.Value::Bool(v))
 }
 
+/// Create a double value expression
+pub fn val_double(v : Double) -> @ast.Expr {
+  @ast.Expr::Value(@ast.Value::Double(v))
+}
+
+/// Create an Int64 value expression
+pub fn val_int64(v : Int64) -> @ast.Expr {
+  @ast.Expr::Value(@ast.Value::Int64(v))
+}
+
 /// Create a null value expression
 pub fn val_null() -> @ast.Expr {
   @ast.Expr::Value(@ast.Value::Null)
+}
+
+/// Create a function call expression
+pub fn func(name : String, args : Array[@ast.Expr]) -> @ast.Expr {
+  @ast.Expr::Func({ name, args })
+}
+
+/// Create an asterisk expression
+pub fn asterisk() -> @ast.Expr {
+  @ast.Expr::Asterisk
 }

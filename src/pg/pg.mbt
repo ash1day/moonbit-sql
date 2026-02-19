@@ -25,9 +25,9 @@ pub async fn Connection::query(
   self : Connection,
   query : @ast.CompiledQuery,
 ) -> Array[Row] raise {
-  let params = params_to_strings(query.params)
+  let params_json = params_to_json(query.params)
   let result_json = try {
-    js_query_raw(self.client, query.sql, params).wait()
+    js_query_raw(self.client, query.sql, params_json).wait()
   } catch {
     err => raise QueryError("query failed: \{err}")
   }
@@ -43,24 +43,32 @@ pub async fn Connection::close(self : Connection) -> Unit {
   js_end_client(self.client).wait()
 }
 
-/// Convert AST Value params to string params for the pg driver
-fn params_to_strings(params : Array[@ast.Value]) -> Array[String] {
-  let result : Array[String] = []
+/// Convert AST Value params to a JSON array string for the pg driver
+fn params_to_json(params : Array[@ast.Value]) -> String {
+  let parts : Array[String] = []
   for param in params {
-    result.push(value_to_string(param))
+    parts.push(value_to_json(param))
   }
-  result
+  "[" + parts.join(", ") + "]"
 }
 
-/// Convert a single AST Value to its string representation
-fn value_to_string(v : @ast.Value) -> String {
+/// Convert a single AST Value to its JSON representation
+fn value_to_json(v : @ast.Value) -> String {
   match v {
     Null => "null"
     Bool(b) => if b { "true" } else { "false" }
     Int(n) => n.to_string()
     Int64(n) => n.to_string()
     Double(n) => n.to_string()
-    String(s) => s
+    String(s) => {
+      let escaped = s
+        .replace_all(old="\\", new="\\\\")
+        .replace_all(old="\"", new="\\\"")
+        .replace_all(old="\n", new="\\n")
+        .replace_all(old="\r", new="\\r")
+        .replace_all(old="\t", new="\\t")
+      "\"" + escaped + "\""
+    }
   }
 }
 

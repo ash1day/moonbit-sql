@@ -16,6 +16,7 @@ pub fn get_str(row : @pg.Row, col : String) -> String raise {
   let v = get_column(row, col)
   match v {
     Str(s) => s
+    Null => raise NullValue(col)
     _ => raise TypeMismatch(col, "String")
   }
 }
@@ -25,6 +26,7 @@ pub fn get_int(row : @pg.Row, col : String) -> Int raise {
   let v = get_column(row, col)
   match v {
     Int(n) => n
+    Null => raise NullValue(col)
     _ => raise TypeMismatch(col, "Int")
   }
 }
@@ -34,6 +36,7 @@ pub fn get_bool(row : @pg.Row, col : String) -> Bool raise {
   let v = get_column(row, col)
   match v {
     Bool(b) => b
+    Null => raise NullValue(col)
     _ => raise TypeMismatch(col, "Bool")
   }
 }
@@ -44,6 +47,7 @@ pub fn get_double(row : @pg.Row, col : String) -> Double raise {
   match v {
     Double(d) => d
     Int(n) => n.to_double()
+    Null => raise NullValue(col)
     _ => raise TypeMismatch(col, "Double")
   }
 }
@@ -54,6 +58,7 @@ pub fn get_int64(row : @pg.Row, col : String) -> Int64 raise {
   match v {
     Int64(n) => n
     Int(n) => n.to_int64()
+    Null => raise NullValue(col)
     _ => raise TypeMismatch(col, "Int64")
   }
 }

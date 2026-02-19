@@ -46,7 +46,7 @@ test "get_str: type mismatch from Bool" {
   }
 }
 
-test "get_str: type mismatch from Null" {
+test "get_str: null value raises NullValue" {
   let row : @pg.Row = { data: { "name": @pg.Null } }
   let result = try {
     Result::Ok(get_str(row, "name"))
@@ -54,8 +54,8 @@ test "get_str: type mismatch from Null" {
     err => Err(err)
   }
   match result {
-    Err(DecodeError::TypeMismatch("name", _)) => ()
-    _ => fail("expected TypeMismatch")
+    Err(DecodeError::NullValue("name")) => ()
+    _ => fail("expected NullValue")
   }
 }
 
@@ -109,7 +109,7 @@ test "get_int: type mismatch from Double" {
   }
 }
 
-test "get_int: type mismatch from Null" {
+test "get_int: null value raises NullValue" {
   let row : @pg.Row = { data: { "age": @pg.Null } }
   let result = try {
     Result::Ok(get_int(row, "age"))
@@ -117,8 +117,8 @@ test "get_int: type mismatch from Null" {
     err => Err(err)
   }
   match result {
-    Err(DecodeError::TypeMismatch("age", _)) => ()
-    _ => fail("expected TypeMismatch")
+    Err(DecodeError::NullValue("age")) => ()
+    _ => fail("expected NullValue")
   }
 }
 
@@ -175,7 +175,7 @@ test "get_bool: type mismatch from Int" {
   }
 }
 
-test "get_bool: type mismatch from Null" {
+test "get_bool: null value raises NullValue" {
   let row : @pg.Row = { data: { "active": @pg.Null } }
   let result = try {
     Result::Ok(get_bool(row, "active"))
@@ -183,8 +183,8 @@ test "get_bool: type mismatch from Null" {
     err => Err(err)
   }
   match result {
-    Err(DecodeError::TypeMismatch("active", _)) => ()
-    _ => fail("expected TypeMismatch")
+    Err(DecodeError::NullValue("active")) => ()
+    _ => fail("expected NullValue")
   }
 }
 
@@ -238,7 +238,7 @@ test "get_double: type mismatch from Str" {
   }
 }
 
-test "get_double: type mismatch from Null" {
+test "get_double: null value raises NullValue" {
   let row : @pg.Row = { data: { "price": @pg.Null } }
   let result = try {
     Result::Ok(get_double(row, "price"))
@@ -246,8 +246,8 @@ test "get_double: type mismatch from Null" {
     err => Err(err)
   }
   match result {
-    Err(DecodeError::TypeMismatch("price", _)) => ()
-    _ => fail("expected TypeMismatch")
+    Err(DecodeError::NullValue("price")) => ()
+    _ => fail("expected NullValue")
   }
 }
 
@@ -301,7 +301,7 @@ test "get_int64: type mismatch from Str" {
   }
 }
 
-test "get_int64: type mismatch from Null" {
+test "get_int64: null value raises NullValue" {
   let row : @pg.Row = { data: { "id": @pg.Null } }
   let result = try {
     Result::Ok(get_int64(row, "id"))
@@ -309,8 +309,8 @@ test "get_int64: type mismatch from Null" {
     err => Err(err)
   }
   match result {
-    Err(DecodeError::TypeMismatch("id", _)) => ()
-    _ => fail("expected TypeMismatch")
+    Err(DecodeError::NullValue("id")) => ()
+    _ => fail("expected NullValue")
   }
 }
 

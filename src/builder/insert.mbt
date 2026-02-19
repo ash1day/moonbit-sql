@@ -40,6 +40,9 @@ pub fn InsertBuilder::returning(self : InsertBuilder, cols : Array[String]) -> I
 
 /// Build the InsertBuilder into a CompiledQuery
 pub fn InsertBuilder::build(self : InsertBuilder) -> @ast.CompiledQuery {
+  if self.values_.is_empty() {
+    abort("moonbit-sql: INSERT requires at least one VALUES row")
+  }
   let stmt : @ast.InsertStatement = {
     table: self.table_,
     columns: self.columns_,

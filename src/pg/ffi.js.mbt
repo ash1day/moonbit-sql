@@ -16,9 +16,13 @@ extern "js" fn js_connect_client(client : PgClient) -> @js_async.Promise[Unit] =
 extern "js" fn js_query_raw(
   client : PgClient,
   sql : String,
-  params : Array[String],
+  params_json : String,
 ) -> @js_async.Promise[String] =
-  #| (client, sql, params) => client.query(sql, params).then((result) => JSON.stringify(result.rows))
+  #| async function(client, sql, paramsJson) {
+  #|   const params = JSON.parse(paramsJson);
+  #|   const result = await client.query(sql, params);
+  #|   return JSON.stringify(result.rows);
+  #| }
 
 /// Disconnect the client (async)
 extern "js" fn js_end_client(client : PgClient) -> @js_async.Promise[Unit] =

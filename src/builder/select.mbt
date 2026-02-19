@@ -188,6 +188,90 @@ pub fn SelectBuilder::cross_join(
   self
 }
 
+/// Add an INNER JOIN with alias
+pub fn SelectBuilder::join_as(
+  self : SelectBuilder,
+  table : String,
+  als : String,
+  on : @ast.Expr
+) -> SelectBuilder {
+  self.joins_.push(
+    {
+      join_type: @ast.JoinType::Inner,
+      table: @ast.TableRef::TableAlias(table, als),
+      on,
+    },
+  )
+  self
+}
+
+/// Add a LEFT JOIN with alias
+pub fn SelectBuilder::left_join_as(
+  self : SelectBuilder,
+  table : String,
+  als : String,
+  on : @ast.Expr
+) -> SelectBuilder {
+  self.joins_.push(
+    {
+      join_type: @ast.JoinType::Left,
+      table: @ast.TableRef::TableAlias(table, als),
+      on,
+    },
+  )
+  self
+}
+
+/// Add a RIGHT JOIN with alias
+pub fn SelectBuilder::right_join_as(
+  self : SelectBuilder,
+  table : String,
+  als : String,
+  on : @ast.Expr
+) -> SelectBuilder {
+  self.joins_.push(
+    {
+      join_type: @ast.JoinType::Right,
+      table: @ast.TableRef::TableAlias(table, als),
+      on,
+    },
+  )
+  self
+}
+
+/// Add a FULL JOIN with alias
+pub fn SelectBuilder::full_join_as(
+  self : SelectBuilder,
+  table : String,
+  als : String,
+  on : @ast.Expr
+) -> SelectBuilder {
+  self.joins_.push(
+    {
+      join_type: @ast.JoinType::Full,
+      table: @ast.TableRef::TableAlias(table, als),
+      on,
+    },
+  )
+  self
+}
+
+/// Add a CROSS JOIN with alias
+pub fn SelectBuilder::cross_join_as(
+  self : SelectBuilder,
+  table : String,
+  als : String
+) -> SelectBuilder {
+  self.joins_.push(
+    {
+      join_type: @ast.JoinType::Cross,
+      table: @ast.TableRef::TableAlias(table, als),
+      on: @ast.Expr::Value(@ast.Value::Bool(true)),
+    },
+  )
+  self
+}
+
 /// Add a WHERE condition (AND-combined with existing)
 pub fn SelectBuilder::where_(self : SelectBuilder, cond : @ast.Expr) -> SelectBuilder {
   self.where_ = match self.where_ {

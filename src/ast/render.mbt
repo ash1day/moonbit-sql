@@ -1,25 +1,32 @@
 /// Internal state for rendering SQL with parameterized queries
 priv struct RenderContext {
-  mut sql : String
+  buf : StringBuilder
   params : Array[Value]
 }
 
 fn RenderContext::new() -> RenderContext {
-  { sql: "", params: [] }
+  { buf: StringBuilder::new(), params: [] }
 }
 
 fn RenderContext::write(self : RenderContext, s : String) -> Unit {
-  self.sql = self.sql + s
+  self.buf.write_string(s)
 }
 
 fn RenderContext::write_param(self : RenderContext, value : Value) -> Unit {
   self.params.push(value)
   let n = self.params.length()
-  self.sql = self.sql + "$\{n}"
+  self.buf.write_string("$\{n}")
 }
 
 fn RenderContext::write_identifier(self : RenderContext, name : String) -> Unit {
-  self.sql = self.sql + "\"" + name + "\""
+  let escaped = name.replace_all(old="\"", new="\"\"")
+  self.buf.write_string("\"")
+  self.buf.write_string(escaped)
+  self.buf.write_string("\"")
+}
+
+fn RenderContext::to_sql(self : RenderContext) -> String {
+  self.buf.to_string()
 }
 
 /// Render a ColumnRef to SQL
@@ -51,6 +58,18 @@ fn binop_to_sql(op : BinOp) -> String {
     Mul => "*"
     Div => "/"
   }
+}
+
+/// Validate that a function name contains only safe characters
+fn validate_func_name(name : String) -> String {
+  for c in name {
+    let valid = (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') ||
+                (c >= '0' && c <= '9') || c == '_' || c == '.'
+    if not(valid) {
+      abort("moonbit-sql: invalid character in function name: \{name}")
+    }
+  }
+  name
 }
 
 /// Render an Expr to SQL
@@ -85,26 +104,34 @@ fn render_expr(ctx : RenderContext, expr : Expr) -> Unit {
       ctx.write(" IS NOT NULL")
     }
     InList(expr, values) => {
-      render_expr(ctx, expr)
-      ctx.write(" IN (")
-      for i, v in values {
-        if i > 0 {
-          ctx.write(", ")
+      if values.is_empty() {
+        ctx.write("FALSE")
+      } else {
+        render_expr(ctx, expr)
+        ctx.write(" IN (")
+        for i, v in values {
+          if i > 0 {
+            ctx.write(", ")
+          }
+          render_expr(ctx, v)
         }
-        render_expr(ctx, v)
+        ctx.write(")")
       }
-      ctx.write(")")
     }
     NotInList(expr, values) => {
-      render_expr(ctx, expr)
-      ctx.write(" NOT IN (")
-      for i, v in values {
-        if i > 0 {
-          ctx.write(", ")
+      if values.is_empty() {
+        ctx.write("TRUE")
+      } else {
+        render_expr(ctx, expr)
+        ctx.write(" NOT IN (")
+        for i, v in values {
+          if i > 0 {
+            ctx.write(", ")
+          }
+          render_expr(ctx, v)
         }
-        render_expr(ctx, v)
+        ctx.write(")")
       }
-      ctx.write(")")
     }
     Between(expr, low, high) => {
       render_expr(ctx, expr)
@@ -121,7 +148,7 @@ fn render_expr(ctx : RenderContext, expr : Expr) -> Unit {
       render_expr(ctx, high)
     }
     Func(func_call) => {
-      ctx.write(func_call.name)
+      ctx.write(validate_func_name(func_call.name))
       ctx.write("(")
       for i, arg in func_call.args {
         if i > 0 {
@@ -275,7 +302,7 @@ pub fn render_select(stmt : SelectStatement) -> CompiledQuery {
     }
     None => ()
   }
-  { sql: ctx.sql, params: ctx.params }
+  { sql: ctx.to_sql(), params: ctx.params }
 }
 
 /// Render an INSERT statement to a CompiledQuery
@@ -319,7 +346,7 @@ pub fn render_insert(stmt : InsertStatement) -> CompiledQuery {
       render_select_item(ctx, item)
     }
   }
-  { sql: ctx.sql, params: ctx.params }
+  { sql: ctx.to_sql(), params: ctx.params }
 }
 
 /// Render an UPDATE statement to a CompiledQuery
@@ -354,7 +381,7 @@ pub fn render_update(stmt : UpdateStatement) -> CompiledQuery {
       render_select_item(ctx, item)
     }
   }
-  { sql: ctx.sql, params: ctx.params }
+  { sql: ctx.to_sql(), params: ctx.params }
 }
 
 /// Render a DELETE statement to a CompiledQuery
@@ -380,5 +407,5 @@ pub fn render_delete(stmt : DeleteStatement) -> CompiledQuery {
       render_select_item(ctx, item)
     }
   }
-  { sql: ctx.sql, params: ctx.params }
+  { sql: ctx.to_sql(), params: ctx.params }
 }

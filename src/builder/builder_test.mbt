@@ -1393,17 +1393,17 @@ test "select without from clause" {
   assert_eq(q.params, [])
 }
 
-test "select with in_list empty array" {
+test "select with in_list empty array renders FALSE" {
   let q = select()
     .all()
     .from("users")
     .where_(col("id").in_list([]))
     .build()
-  assert_eq(q.sql, "SELECT * FROM \"users\" WHERE \"id\" IN ()")
+  assert_eq(q.sql, "SELECT * FROM \"users\" WHERE FALSE")
   assert_eq(q.params, [])
 }
 
-test "select with not_in_list empty array" {
+test "select with not_in_list empty array renders TRUE" {
   let q = select()
     .all()
     .from("users")
@@ -1411,7 +1411,7 @@ test "select with not_in_list empty array" {
     .build()
   assert_eq(
     q.sql,
-    "SELECT * FROM \"users\" WHERE \"id\" NOT IN ()",
+    "SELECT * FROM \"users\" WHERE TRUE",
   )
   assert_eq(q.params, [])
 }
@@ -1607,4 +1607,103 @@ test "select with single in_list item" {
     "SELECT * FROM \"users\" WHERE \"id\" IN ($1)",
   )
   assert_eq(q.params, [@ast.Value::Int(42)])
+}
+
+// ========================================================
+// Identifier escaping
+// ========================================================
+
+test "identifier with double quote is escaped" {
+  let q = select().column("col\"name").from("my\"table").build()
+  assert_eq(q.sql, "SELECT \"col\"\"name\" FROM \"my\"\"table\"")
+}
+
+// ========================================================
+// Function name validation
+// ========================================================
+
+test "function name with valid characters" {
+  let q = select().expr(func("COUNT", [asterisk()])).from("t").build()
+  assert_eq(q.sql, "SELECT COUNT(*) FROM \"t\"")
+}
+
+test "function name with dot for schema qualified" {
+  let q = select().expr(func("pg_catalog.array_agg", [col("x")])).from("t").build()
+  assert_eq(q.sql, "SELECT pg_catalog.array_agg(\"x\") FROM \"t\"")
+}
+
+// ========================================================
+// JOIN with alias
+// ========================================================
+
+test "join with alias" {
+  let q = select()
+    .all()
+    .from_as("users", "u")
+    .join_as(
+      "orders",
+      "o",
+      table_col("u", "id").eq(table_col("o", "user_id")),
+    )
+    .build()
+  assert_eq(
+    q.sql,
+    "SELECT * FROM \"users\" AS \"u\" INNER JOIN \"orders\" AS \"o\" ON (\"u\".\"id\" = \"o\".\"user_id\")",
+  )
+}
+
+test "left join with alias" {
+  let q = select()
+    .all()
+    .from_as("users", "u")
+    .left_join_as(
+      "profiles",
+      "p",
+      table_col("u", "id").eq(table_col("p", "user_id")),
+    )
+    .build()
+  assert_eq(
+    q.sql,
+    "SELECT * FROM \"users\" AS \"u\" LEFT JOIN \"profiles\" AS \"p\" ON (\"u\".\"id\" = \"p\".\"user_id\")",
+  )
+}
+
+test "right join with alias" {
+  let q = select()
+    .all()
+    .from_as("users", "u")
+    .right_join_as(
+      "orders",
+      "o",
+      table_col("u", "id").eq(table_col("o", "user_id")),
+    )
+    .build()
+  assert_eq(
+    q.sql,
+    "SELECT * FROM \"users\" AS \"u\" RIGHT JOIN \"orders\" AS \"o\" ON (\"u\".\"id\" = \"o\".\"user_id\")",
+  )
+}
+
+test "full join with alias" {
+  let q = select()
+    .all()
+    .from("a")
+    .full_join_as(
+      "b",
+      "bb",
+      table_col("a", "id").eq(table_col("bb", "a_id")),
+    )
+    .build()
+  assert_eq(
+    q.sql,
+    "SELECT * FROM \"a\" FULL JOIN \"b\" AS \"bb\" ON (\"a\".\"id\" = \"bb\".\"a_id\")",
+  )
+}
+
+test "cross join with alias" {
+  let q = select().all().from("colors").cross_join_as("sizes", "s").build()
+  assert_eq(
+    q.sql,
+    "SELECT * FROM \"colors\" CROSS JOIN \"sizes\" AS \"s\"",
+  )
 }

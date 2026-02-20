@@ -202,6 +202,7 @@ fn render_expr(ctx : RenderContext, expr : Expr) -> Unit raise {
       render_select_body(ctx, sub_stmt)
       ctx.write(")")
     }
+    Raw(sql) => ctx.write(sql)
     WindowFunc(func_call, win_spec) => {
       ctx.write(validate_func_name(func_call.name))
       ctx.write("(")

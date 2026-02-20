@@ -2752,3 +2752,63 @@ test "insert values and select both set raises ConflictingInsertSource" {
     _ => fail("expected ConflictingInsertSource")
   }
 }
+
+// ========================================================
+// raw(): verbatim SQL injection
+// ========================================================
+
+test "raw in SELECT expr" {
+  let q = select()
+    .expr_as(raw("current_timestamp"), "ts")
+    .from("events")
+    .build()
+  assert_eq!(
+    q.sql,
+    "SELECT current_timestamp AS \"ts\" FROM \"events\"",
+  )
+  assert_eq!(q.params, [])
+}
+
+test "raw in WHERE clause" {
+  let q = select()
+    .column("id")
+    .from("sessions")
+    .where_(raw("expires_at > now()"))
+    .build()
+  assert_eq!(
+    q.sql,
+    "SELECT \"id\" FROM \"sessions\" WHERE expires_at > now()",
+  )
+  assert_eq!(q.params, [])
+}
+
+test "raw combined with typed expr" {
+  let q = select()
+    .column("id")
+    .from("logs")
+    .where_(
+      col("level")
+      .eq(val_str("error"))
+      .and_(raw("created_at > now() - interval '7 days'")),
+    )
+    .build()
+  assert_eq!(
+    q.sql,
+    "SELECT \"id\" FROM \"logs\" WHERE ((\"level\" = $1) AND created_at > now() - interval '7 days')",
+  )
+  assert_eq!(q.params, [@ast.Value::String("error")])
+}
+
+test "raw in GROUP BY via group_by_expr" {
+  let q = select()
+    .expr_as(raw("date_trunc('month', created_at)"), "month")
+    .expr_as(func("COUNT", [asterisk()]), "cnt")
+    .from("events")
+    .group_by_expr(raw("date_trunc('month', created_at)"))
+    .build()
+  assert_eq!(
+    q.sql,
+    "SELECT date_trunc('month', created_at) AS \"month\", COUNT(*) AS \"cnt\" FROM \"events\" GROUP BY date_trunc('month', created_at)",
+  )
+  assert_eq!(q.params, [])
+}

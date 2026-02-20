@@ -107,6 +107,13 @@ pub fn not_exists(sub : SelectBuilder) -> @ast.Expr {
   @ast.Expr::NotExists(sub.build_statement())
 }
 
+/// Inject raw SQL verbatim — use only when no typed builder method covers the use case.
+/// The string is written as-is with no escaping or parameterization.
+/// Warning: never pass user input here; it will not be sanitized.
+pub fn raw(sql : String) -> @ast.Expr {
+  @ast.Expr::Raw(sql)
+}
+
 /// Builder for CASE WHEN ... THEN ... ELSE ... END expressions
 pub struct CaseBuilder {
   branches : Array[@ast.WhenClause]

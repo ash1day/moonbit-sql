@@ -66,6 +66,8 @@ pub(all) enum Expr {
   CaseExpr(Array[WhenClause], Expr?)
   Exists(SelectStatement)
   NotExists(SelectStatement)
+  /// Raw SQL string injected verbatim — use only when no typed builder exists
+  Raw(String)
 } derive(Show, Eq)
 
 /// SQL function call

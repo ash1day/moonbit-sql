@@ -47,9 +47,9 @@ pub fn UpdateBuilder::returning(self : UpdateBuilder, cols : Array[String]) -> U
 }
 
 /// Build the UpdateBuilder into a CompiledQuery
-pub fn UpdateBuilder::build(self : UpdateBuilder) -> @ast.CompiledQuery {
+pub fn UpdateBuilder::build(self : UpdateBuilder) -> @ast.CompiledQuery raise {
   if self.assignments_.is_empty() {
-    abort("moonbit-sql: UPDATE requires at least one SET assignment")
+    raise EmptyAssignments("UPDATE requires at least one SET assignment")
   }
   let stmt : @ast.UpdateStatement = {
     table: self.table_,

@@ -510,10 +510,7 @@ test "select with between and not between combined" {
 
 test "select with arithmetic multiply" {
   let q = select()
-    .expr_as(
-      @ast.Expr::Binary(col("price"), @ast.BinOp::Mul, col("quantity")),
-      "total",
-    )
+    .expr_as(col("price").mul(col("quantity")), "total")
     .from("order_items")
     .build()
   assert_eq(
@@ -528,9 +525,7 @@ test "select with arithmetic in where" {
     .column("character")
     .from("character")
     .where_(
-      @ast.Expr::Binary(col("size_w"), @ast.BinOp::Mul, val_int(2)).eq(
-        @ast.Expr::Binary(col("size_h"), @ast.BinOp::Div, val_int(2)),
-      ),
+      col("size_w").mul(val_int(2)).eq(col("size_h").div(val_int(2))),
     )
     .build()
   assert_eq(
@@ -546,11 +541,9 @@ test "select with complex arithmetic" {
     .columns(["character", "size_w", "size_h"])
     .from("character")
     .where_(
-      @ast.Expr::Binary(
-        @ast.Expr::Binary(col("size_w"), @ast.BinOp::Mul, val_int(2)),
-        @ast.BinOp::Add,
-        @ast.Expr::Binary(col("size_h"), @ast.BinOp::Div, val_int(3)),
-      )
+      col("size_w")
+        .mul(val_int(2))
+        .add(col("size_h").div(val_int(3)))
         .eq(val_int(4)),
     )
     .build()
@@ -572,9 +565,7 @@ test "select with not expression" {
   let q = select()
     .all()
     .from("users")
-    .where_(
-      @ast.Expr::Unary(@ast.UnOp::Not, col("active").eq(val_bool(true))),
-    )
+    .where_(col("active").eq(val_bool(true)).not_())
     .build()
   assert_eq(
     q.sql,
@@ -585,7 +576,7 @@ test "select with not expression" {
 
 test "select with negation" {
   let q = select()
-    .expr(@ast.Expr::Unary(@ast.UnOp::Neg, col("balance")))
+    .expr(col("balance").neg())
     .from("accounts")
     .build()
   assert_eq(q.sql, "SELECT (-\"balance\") FROM \"accounts\"")
@@ -926,13 +917,7 @@ test "select with group by and having" {
     .expr(func("COUNT", [asterisk()]))
     .from("employees")
     .group_by("department")
-    .having(
-      @ast.Expr::Binary(
-        func("COUNT", [asterisk()]),
-        @ast.BinOp::Gt,
-        @ast.Expr::Value(@ast.Value::Int(5)),
-      ),
-    )
+    .having(func("COUNT", [asterisk()]).gt(val_int(5)))
     .build()
   assert_eq(
     q.sql,
@@ -1285,10 +1270,7 @@ test "update with multiple set and where" {
 test "update set column to expression" {
   // SET "aspect" = "aspect" + 1
   let q = update("glyph")
-    .set(
-      "aspect",
-      @ast.Expr::Binary(col("aspect"), @ast.BinOp::Add, val_int(1)),
-    )
+    .set("aspect", col("aspect").add(val_int(1)))
     .where_(col("id").eq(val_int(1)))
     .build()
   assert_eq(
@@ -1759,11 +1741,10 @@ test "select from subquery with join" {
 
 test "select with in subquery" {
   let sub = select().column("id").from("users").where_(col("active").eq(val_bool(true)))
-  let sub_stmt = sub.build_statement()
   let q = select()
     .all()
     .from("orders")
-    .where_(col("user_id").in_subquery(sub_stmt))
+    .where_(in_sub(col("user_id"), sub))
     .build()
   assert_eq(
     q.sql,
@@ -1774,11 +1755,10 @@ test "select with in subquery" {
 
 test "select with not in subquery" {
   let sub = select().column("id").from("banned_users")
-  let sub_stmt = sub.build_statement()
   let q = select()
     .all()
     .from("users")
-    .where_(col("id").not_in_subquery(sub_stmt))
+    .where_(not_in_sub(col("id"), sub))
     .build()
   assert_eq(
     q.sql,
@@ -1789,11 +1769,10 @@ test "select with not in subquery" {
 
 test "select with in subquery and other conditions" {
   let sub = select().column("user_id").from("orders").where_(col("total").gt(val_int(1000)))
-  let sub_stmt = sub.build_statement()
   let q = select()
     .all()
     .from("users")
-    .where_(col("id").in_subquery(sub_stmt))
+    .where_(in_sub(col("id"), sub))
     .where_(col("active").eq(val_bool(true)))
     .build()
   assert_eq(
@@ -2041,9 +2020,7 @@ test "insert on conflict do update with value" {
     .values([val_str("hits"), val_int(1)])
     .on_conflict_do_update(
       ["key"],
-      [
-        ("value", @ast.Expr::Binary(table_col("counters", "value"), @ast.BinOp::Add, val_int(1))),
-      ],
+      [("value", table_col("counters", "value").add(val_int(1)))],
     )
     .build()
   assert_eq(
@@ -2251,11 +2228,10 @@ test "CTE with union inside" {
 
 test "subquery with params in nested context" {
   let sub = select().column("id").from("users").where_(col("age").gt(val_int(18)))
-  let sub_stmt = sub.build_statement()
   let q = select()
     .all()
     .from("orders")
-    .where_(col("user_id").in_subquery(sub_stmt))
+    .where_(in_sub(col("user_id"), sub))
     .where_(col("total").gt(val_int(50)))
     .order_by("total", @ast.Desc)
     .limit(10)
@@ -2268,4 +2244,238 @@ test "subquery with params in nested context" {
     q.params,
     [@ast.Value::Int(18), @ast.Value::Int(50), @ast.Value::Int(10)],
   )
+}
+
+// ========================================================
+// BuildError: raise テスト
+// ========================================================
+
+test "insert empty values raises EmptyValues" {
+  let result = try {
+    Result::Ok(insert_into("users").columns(["name"]).build())
+  } catch {
+    err => Err(err)
+  }
+  match result {
+    Err(BuildError::EmptyValues(_)) => ()
+    _ => fail("expected EmptyValues")
+  }
+}
+
+test "update empty assignments raises EmptyAssignments" {
+  let result = try {
+    Result::Ok(update("users").where_(col("id").eq(val_int(1))).build())
+  } catch {
+    err => Err(err)
+  }
+  match result {
+    Err(BuildError::EmptyAssignments(_)) => ()
+    _ => fail("expected EmptyAssignments")
+  }
+}
+
+test "on_conflict_do_nothing empty columns raises EmptyConflictColumns" {
+  let result = try {
+    Result::Ok(
+      insert_into("users")
+        .columns(["name"])
+        .values([val_str("Alice")])
+        .on_conflict_do_nothing([])
+        .build(),
+    )
+  } catch {
+    err => Err(err)
+  }
+  match result {
+    Err(BuildError::EmptyConflictColumns(_)) => ()
+    _ => fail("expected EmptyConflictColumns")
+  }
+}
+
+test "on_conflict_do_update empty columns raises EmptyConflictColumns" {
+  let result = try {
+    Result::Ok(
+      insert_into("users")
+        .columns(["name"])
+        .values([val_str("Alice")])
+        .on_conflict_do_update([], [("name", table_col("excluded", "name"))])
+        .build(),
+    )
+  } catch {
+    err => Err(err)
+  }
+  match result {
+    Err(BuildError::EmptyConflictColumns(_)) => ()
+    _ => fail("expected EmptyConflictColumns")
+  }
+}
+
+test "func invalid name raises InvalidFuncName" {
+  let result = try {
+    Result::Ok(func("COUNT(*)", []))
+  } catch {
+    err => Err(err)
+  }
+  match result {
+    Err(BuildError::InvalidFuncName(_)) => ()
+    _ => fail("expected InvalidFuncName")
+  }
+}
+
+test "window_func invalid name raises InvalidFuncName" {
+  let result = try {
+    Result::Ok(window_func("ROW; DROP TABLE--", []))
+  } catch {
+    err => Err(err)
+  }
+  match result {
+    Err(BuildError::InvalidFuncName(_)) => ()
+    _ => fail("expected InvalidFuncName")
+  }
+}
+
+// ========================================================
+// HAVING: AND 結合テスト
+// ========================================================
+
+test "having with multiple conditions AND-combined" {
+  let q = select()
+    .column("dept")
+    .expr_as(func("COUNT", [asterisk()]), "cnt")
+    .from("employees")
+    .group_by("dept")
+    .having(func("COUNT", [asterisk()]).gt(val_int(5)))
+    .having(func("COUNT", [asterisk()]).lt(val_int(100)))
+    .build()
+  assert_eq(
+    q.sql,
+    "SELECT \"dept\", COUNT(*) AS \"cnt\" FROM \"employees\" GROUP BY \"dept\" HAVING ((COUNT(*) > $1) AND (COUNT(*) < $2))",
+  )
+  assert_eq(q.params, [@ast.Value::Int(5), @ast.Value::Int(100)])
+}
+
+// ========================================================
+// 算術ヘルパー: add, sub_, mul, div, not_, neg
+// ========================================================
+
+test "arithmetic helper: add" {
+  let q = select()
+    .expr_as(col("price").add(col("tax")), "total")
+    .from("items")
+    .build()
+  assert_eq(
+    q.sql,
+    "SELECT (\"price\" + \"tax\") AS \"total\" FROM \"items\"",
+  )
+  assert_eq(q.params, [])
+}
+
+test "arithmetic helper: sub_" {
+  let q = select()
+    .expr_as(col("price").sub_(col("discount")), "net")
+    .from("items")
+    .build()
+  assert_eq(
+    q.sql,
+    "SELECT (\"price\" - \"discount\") AS \"net\" FROM \"items\"",
+  )
+  assert_eq(q.params, [])
+}
+
+test "arithmetic helper: mul" {
+  let q = select()
+    .expr_as(col("price").mul(col("quantity")), "total")
+    .from("order_items")
+    .build()
+  assert_eq(
+    q.sql,
+    "SELECT (\"price\" * \"quantity\") AS \"total\" FROM \"order_items\"",
+  )
+  assert_eq(q.params, [])
+}
+
+test "arithmetic helper: div" {
+  let q = select()
+    .expr_as(col("total").div(col("count")), "average")
+    .from("stats")
+    .build()
+  assert_eq(
+    q.sql,
+    "SELECT (\"total\" / \"count\") AS \"average\" FROM \"stats\"",
+  )
+  assert_eq(q.params, [])
+}
+
+test "arithmetic helper: not_" {
+  let q = select()
+    .all()
+    .from("users")
+    .where_(col("active").eq(val_bool(true)).not_())
+    .build()
+  assert_eq(
+    q.sql,
+    "SELECT * FROM \"users\" WHERE (NOT (\"active\" = $1))",
+  )
+  assert_eq(q.params, [@ast.Value::Bool(true)])
+}
+
+test "arithmetic helper: neg" {
+  let q = select()
+    .expr(col("balance").neg())
+    .from("accounts")
+    .build()
+  assert_eq(q.sql, "SELECT (-\"balance\") FROM \"accounts\"")
+  assert_eq(q.params, [])
+}
+
+test "arithmetic helpers: combined expression" {
+  let q = select()
+    .columns(["character", "size_w", "size_h"])
+    .from("character")
+    .where_(
+      col("size_w").mul(val_int(2)).add(col("size_h").div(val_int(3))).eq(
+        val_int(4),
+      ),
+    )
+    .build()
+  assert_eq(
+    q.sql,
+    "SELECT \"character\", \"size_w\", \"size_h\" FROM \"character\" WHERE (((\"size_w\" * $1) + (\"size_h\" / $2)) = $3)",
+  )
+  assert_eq(
+    q.params,
+    [@ast.Value::Int(2), @ast.Value::Int(3), @ast.Value::Int(4)],
+  )
+}
+
+// ========================================================
+// in_sub / not_in_sub ヘルパー
+// ========================================================
+
+test "in_sub helper" {
+  let sub = select().column("id").from("active_users")
+  let q = select()
+    .all()
+    .from("orders")
+    .where_(in_sub(col("user_id"), sub))
+    .build()
+  assert_eq(
+    q.sql,
+    "SELECT * FROM \"orders\" WHERE \"user_id\" IN (SELECT \"id\" FROM \"active_users\")",
+  )
+  assert_eq(q.params, [])
+}
+
+test "not_in_sub helper" {
+  let sub = select().column("id").from("banned_users")
+  let q = select()
+    .all()
+    .from("orders")
+    .where_(not_in_sub(col("user_id"), sub))
+    .build()
+  assert_eq(
+    q.sql,
+    "SELECT * FROM \"orders\" WHERE \"user_id\" NOT IN (SELECT \"id\" FROM \"banned_users\")",
+  )
+  assert_eq(q.params, [])
 }

@@ -40,8 +40,20 @@ pub fn val_null() -> @ast.Expr {
   @ast.Expr::Value(@ast.Value::Null)
 }
 
+/// Validate that a function name contains only safe characters
+fn validate_builder_func_name(name : String) -> Unit raise {
+  for c in name {
+    let valid = (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' &&
+    c <= '9') || c == '_' || c == '.'
+    if not(valid) {
+      raise InvalidFuncName(name)
+    }
+  }
+}
+
 /// Create a function call expression
-pub fn func(name : String, args : Array[@ast.Expr]) -> @ast.Expr {
+pub fn func(name : String, args : Array[@ast.Expr]) -> @ast.Expr raise {
+  validate_builder_func_name(name)
   @ast.Expr::Func({ name, args })
 }
 
@@ -56,7 +68,8 @@ pub fn window_func(
   args : Array[@ast.Expr],
   partition_by~ : Array[String] = [],
   order_by~ : Array[(String, @ast.Order)] = []
-) -> @ast.Expr {
+) -> @ast.Expr raise {
+  validate_builder_func_name(name)
   let partition_exprs = partition_by.map(
     fn(c) { @ast.Expr::Column(@ast.ColumnRef::Column(c)) },
   )
@@ -72,4 +85,14 @@ pub fn window_func(
     { name, args },
     { partition_by: partition_exprs, order_by: order_items },
   )
+}
+
+/// IN subquery check using SelectBuilder
+pub fn in_sub(expr : @ast.Expr, sub : SelectBuilder) -> @ast.Expr {
+  expr.in_subquery(sub.build_statement())
+}
+
+/// NOT IN subquery check using SelectBuilder
+pub fn not_in_sub(expr : @ast.Expr, sub : SelectBuilder) -> @ast.Expr {
+  expr.not_in_subquery(sub.build_statement())
 }

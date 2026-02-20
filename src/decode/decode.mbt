@@ -84,6 +84,28 @@ pub fn get_optional_int(row : @pg.Row, col : String) -> Int? raise {
   }
 }
 
+/// Extract an optional Double value from a Row by column name
+pub fn get_optional_double(row : @pg.Row, col : String) -> Double? raise {
+  let v = get_column(row, col)
+  match v {
+    Null => None
+    Double(d) => Some(d)
+    Int(n) => Some(n.to_double())
+    _ => raise TypeMismatch(col, "Double?")
+  }
+}
+
+/// Extract an optional Int64 value from a Row by column name
+pub fn get_optional_int64(row : @pg.Row, col : String) -> Int64? raise {
+  let v = get_column(row, col)
+  match v {
+    Null => None
+    Int64(n) => Some(n)
+    Int(n) => Some(n.to_int64())
+    _ => raise TypeMismatch(col, "Int64?")
+  }
+}
+
 /// Extract an optional Bool value from a Row by column name
 pub fn get_optional_bool(row : @pg.Row, col : String) -> Bool? raise {
   let v = get_column(row, col)

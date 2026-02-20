@@ -463,6 +463,96 @@ test "get_optional_bool: type mismatch from Int" {
 }
 
 // ========================================================
+// get_optional_double
+// ========================================================
+
+test "get_optional_double: from Double" {
+  let row : @pg.Row = { data: { "price": @pg.Double(9.99) } }
+  assert_eq(get_optional_double(row, "price"), Some(9.99))
+}
+
+test "get_optional_double: null value" {
+  let row : @pg.Row = { data: { "price": @pg.Null } }
+  assert_eq(get_optional_double(row, "price"), None)
+}
+
+test "get_optional_double: from Int (implicit conversion)" {
+  let row : @pg.Row = { data: { "price": @pg.Int(10) } }
+  assert_eq(get_optional_double(row, "price"), Some(10.0))
+}
+
+test "get_optional_double: type mismatch from Str" {
+  let row : @pg.Row = { data: { "price": @pg.Str("9.99") } }
+  let result = try {
+    Result::Ok(get_optional_double(row, "price"))
+  } catch {
+    err => Err(err)
+  }
+  match result {
+    Err(DecodeError::TypeMismatch("price", _)) => ()
+    _ => fail("expected TypeMismatch")
+  }
+}
+
+test "get_optional_double: column not found" {
+  let row : @pg.Row = { data: {} }
+  let result = try {
+    Result::Ok(get_optional_double(row, "price"))
+  } catch {
+    err => Err(err)
+  }
+  match result {
+    Err(DecodeError::ColumnNotFound("price")) => ()
+    _ => fail("expected ColumnNotFound")
+  }
+}
+
+// ========================================================
+// get_optional_int64
+// ========================================================
+
+test "get_optional_int64: from Int64" {
+  let row : @pg.Row = { data: { "big_id": @pg.Int64(9999999999L) } }
+  assert_eq(get_optional_int64(row, "big_id"), Some(9999999999L))
+}
+
+test "get_optional_int64: null value" {
+  let row : @pg.Row = { data: { "big_id": @pg.Null } }
+  assert_eq(get_optional_int64(row, "big_id"), None)
+}
+
+test "get_optional_int64: from Int (implicit conversion)" {
+  let row : @pg.Row = { data: { "id": @pg.Int(42) } }
+  assert_eq(get_optional_int64(row, "id"), Some(42L))
+}
+
+test "get_optional_int64: type mismatch from Str" {
+  let row : @pg.Row = { data: { "id": @pg.Str("big") } }
+  let result = try {
+    Result::Ok(get_optional_int64(row, "id"))
+  } catch {
+    err => Err(err)
+  }
+  match result {
+    Err(DecodeError::TypeMismatch("id", _)) => ()
+    _ => fail("expected TypeMismatch")
+  }
+}
+
+test "get_optional_int64: column not found" {
+  let row : @pg.Row = { data: {} }
+  let result = try {
+    Result::Ok(get_optional_int64(row, "id"))
+  } catch {
+    err => Err(err)
+  }
+  match result {
+    Err(DecodeError::ColumnNotFound("id")) => ()
+    _ => fail("expected ColumnNotFound")
+  }
+}
+
+// ========================================================
 // Cross-type boundary tests
 // ========================================================
 

@@ -55,13 +55,40 @@ fn value_to_json(v : @ast.Value) -> String {
     Int64(n) => n.to_string()
     Double(n) => n.to_string()
     String(s) => {
-      let escaped = s
-        .replace_all(old="\\", new="\\\\")
-        .replace_all(old="\"", new="\\\"")
-        .replace_all(old="\n", new="\\n")
-        .replace_all(old="\r", new="\\r")
-        .replace_all(old="\t", new="\\t")
-      "\"" + escaped + "\""
+      let buf = StringBuilder::new()
+      buf.write_char('"')
+      for c in s {
+        let code = c.to_int()
+        if c == '\\' {
+          buf.write_string("\\\\")
+        } else if c == '"' {
+          buf.write_string("\\\"")
+        } else if c == '\n' {
+          buf.write_string("\\n")
+        } else if c == '\r' {
+          buf.write_string("\\r")
+        } else if c == '\t' {
+          buf.write_string("\\t")
+        } else if code == 0x08 {
+          // backspace
+          buf.write_string("\\b")
+        } else if code == 0x0C {
+          // form feed
+          buf.write_string("\\f")
+        } else if code >= 0x00 && code <= 0x1F {
+          // other control characters
+          let hex_str = if code < 16 {
+            "\\u000" + to_hex_digit(code)
+          } else {
+            "\\u001" + to_hex_digit(code - 16)
+          }
+          buf.write_string(hex_str)
+        } else {
+          buf.write_char(c)
+        }
+      }
+      buf.write_char('"')
+      buf.to_string()
     }
   }
 }
@@ -92,6 +119,28 @@ fn parse_row(json : Json) -> Row raise {
       { data: row }
     }
     _ => raise ParseError("expected JSON object for row")
+  }
+}
+
+/// Convert a single hex digit (0-15) to its character representation
+fn to_hex_digit(n : Int) -> String {
+  match n {
+    0 => "0"
+    1 => "1"
+    2 => "2"
+    3 => "3"
+    4 => "4"
+    5 => "5"
+    6 => "6"
+    7 => "7"
+    8 => "8"
+    9 => "9"
+    10 => "a"
+    11 => "b"
+    12 => "c"
+    13 => "d"
+    14 => "e"
+    _ => "f"
   }
 }
 

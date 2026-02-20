@@ -24,25 +24,25 @@ test "native pg integration: basic CRUD" {
     params: [],
   }
   let rows = conn.query(select_sql)
-  assert_eq!(rows.length(), 2)
+  assert_eq(rows.length(), 2)
   // Check first row
   let row0 = rows[0]
-  assert_eq!(row0.data.get("id"), Option::Some(ColumnValue::Int(1)))
-  assert_eq!(row0.data.get("name"), Option::Some(ColumnValue::Str("alice")))
-  assert_eq!(row0.data.get("active"), Option::Some(ColumnValue::Bool(true)))
+  assert_eq(row0.data.get("id"), Option::Some(ColumnValue::Int(1)))
+  assert_eq(row0.data.get("name"), Option::Some(ColumnValue::Str("alice")))
+  assert_eq(row0.data.get("active"), Option::Some(ColumnValue::Bool(true)))
   // Check second row
   let row1 = rows[1]
-  assert_eq!(row1.data.get("id"), Option::Some(ColumnValue::Int(2)))
-  assert_eq!(row1.data.get("name"), Option::Some(ColumnValue::Str("bob")))
-  assert_eq!(row1.data.get("active"), Option::Some(ColumnValue::Bool(false)))
+  assert_eq(row1.data.get("id"), Option::Some(ColumnValue::Int(2)))
+  assert_eq(row1.data.get("name"), Option::Some(ColumnValue::Str("bob")))
+  assert_eq(row1.data.get("active"), Option::Some(ColumnValue::Bool(false)))
   // Query with WHERE parameter
   let where_sql : @ast.CompiledQuery = {
     sql: "SELECT name FROM _moonbit_sql_test WHERE id = $1",
     params: [@ast.Value::Int(1)],
   }
   let filtered = conn.query(where_sql)
-  assert_eq!(filtered.length(), 1)
-  assert_eq!(
+  assert_eq(filtered.length(), 1)
+  assert_eq(
     filtered[0].data.get("name"), Option::Some(ColumnValue::Str("alice")),
   )
   // Clean up (temp table is auto-dropped, but close connection)

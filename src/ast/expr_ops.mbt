@@ -82,3 +82,33 @@ pub fn Expr::in_subquery(self : Expr, sub : SelectStatement) -> Expr {
 pub fn Expr::not_in_subquery(self : Expr, sub : SelectStatement) -> Expr {
   NotInSubquery(self, sub)
 }
+
+/// Addition: self + other
+pub fn Expr::add(self : Expr, other : Expr) -> Expr {
+  Binary(self, Add, other)
+}
+
+/// Subtraction: self - other
+pub fn Expr::sub_(self : Expr, other : Expr) -> Expr {
+  Binary(self, Sub, other)
+}
+
+/// Multiplication: self * other
+pub fn Expr::mul(self : Expr, other : Expr) -> Expr {
+  Binary(self, Mul, other)
+}
+
+/// Division: self / other
+pub fn Expr::div(self : Expr, other : Expr) -> Expr {
+  Binary(self, Div, other)
+}
+
+/// Logical NOT: NOT self
+pub fn Expr::not_(self : Expr) -> Expr {
+  Unary(Not, self)
+}
+
+/// Negation: -self
+pub fn Expr::neg(self : Expr) -> Expr {
+  Unary(Neg, self)
+}

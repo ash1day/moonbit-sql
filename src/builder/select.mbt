@@ -292,9 +292,13 @@ pub fn SelectBuilder::group_by(self : SelectBuilder, c : String) -> SelectBuilde
   self
 }
 
-/// Set HAVING condition
+/// Add a HAVING condition (AND-combined with existing)
 pub fn SelectBuilder::having(self : SelectBuilder, cond : @ast.Expr) -> SelectBuilder {
-  self.having_ = Some(cond)
+  self.having_ = match self.having_ {
+    None => Some(cond)
+    Some(existing) =>
+      Some(@ast.Expr::Binary(existing, @ast.BinOp::And, cond))
+  }
   self
 }
 

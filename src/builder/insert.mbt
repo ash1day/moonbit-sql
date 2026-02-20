@@ -64,9 +64,18 @@ pub fn InsertBuilder::on_conflict_do_update(
 }
 
 /// Build the InsertBuilder into a CompiledQuery
-pub fn InsertBuilder::build(self : InsertBuilder) -> @ast.CompiledQuery {
+pub fn InsertBuilder::build(self : InsertBuilder) -> @ast.CompiledQuery raise {
   if self.values_.is_empty() {
-    abort("moonbit-sql: INSERT requires at least one VALUES row")
+    raise EmptyValues("INSERT requires at least one VALUES row")
+  }
+  match self.on_conflict_ {
+    Some({ columns, .. }) =>
+      if columns.is_empty() {
+        raise EmptyConflictColumns(
+          "ON CONFLICT requires at least one column",
+        )
+      }
+    None => ()
   }
   let stmt : @ast.InsertStatement = {
     table: self.table_,

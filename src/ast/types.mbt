@@ -171,3 +171,8 @@ pub(all) struct CompiledQuery {
   sql : String
   params : Array[Value]
 } derive(Show, Eq)
+
+/// Errors that can occur during SQL rendering
+pub suberror RenderError {
+  InvalidFuncName(String)
+}

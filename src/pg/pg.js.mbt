@@ -37,6 +37,7 @@ pub async fn Connection::close(self : Connection) -> Unit {
   js_end_client(self.client).wait()
 }
 
+
 /// Convert AST Value params to a JSON array string for the pg driver
 fn params_to_json(params : Array[@ast.Value]) -> String {
   let parts : Array[String] = []

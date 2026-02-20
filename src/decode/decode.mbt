@@ -115,3 +115,24 @@ pub fn get_optional_bool(row : @pg.Row, col : String) -> Bool? raise {
     _ => raise TypeMismatch(col, "Bool?")
   }
 }
+
+/// Extract a JSON String value from a Row by column name
+pub fn get_json(row : @pg.Row, col : String) -> String raise {
+  let v = get_column(row, col)
+  match v {
+    Json(s) => s
+    Null => raise NullValue(col)
+    _ => raise TypeMismatch(col, "Json")
+  }
+}
+
+/// Extract an optional JSON String value from a Row by column name
+/// Returns None if the column is NULL, raises ColumnNotFound if column missing
+pub fn get_optional_json(row : @pg.Row, col : String) -> String? raise {
+  let v = get_column(row, col)
+  match v {
+    Null => None
+    Json(s) => Some(s)
+    _ => raise TypeMismatch(col, "Json?")
+  }
+}

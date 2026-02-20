@@ -11,6 +11,7 @@
     "pg.js.mbt": ["js"],
     "pg.native.mbt": ["native"],
     "pg_native_wbtest.mbt": ["native"],
-    "integration_native_wbtest.mbt": ["native"]
+    "integration_native_wbtest.mbt": ["native"],
+    "pg_js_wbtest.mbt": ["js"]
   }
 }

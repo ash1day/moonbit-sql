@@ -35,7 +35,7 @@ pub fn DeleteBuilder::returning(self : DeleteBuilder, cols : Array[String]) -> D
 }
 
 /// Build the DeleteBuilder into a CompiledQuery
-pub fn DeleteBuilder::build(self : DeleteBuilder) -> @ast.CompiledQuery {
+pub fn DeleteBuilder::build(self : DeleteBuilder) -> @ast.CompiledQuery raise {
   let stmt : @ast.DeleteStatement = {
     table: self.table_,
     where_: self.where_,

@@ -466,7 +466,7 @@ pub fn SelectBuilder::build_statement(self : SelectBuilder) -> @ast.SelectStatem
 }
 
 /// Build the SelectBuilder into a CompiledQuery
-pub fn SelectBuilder::build(self : SelectBuilder) -> @ast.CompiledQuery {
+pub fn SelectBuilder::build(self : SelectBuilder) -> @ast.CompiledQuery raise {
   let stmt = self.build_statement()
   @ast.render_select(stmt)
 }

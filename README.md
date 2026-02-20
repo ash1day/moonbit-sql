@@ -432,6 +432,26 @@ pub suberror DecodeError {
 - **`Int64` is never returned from query results.** The JS target converts all numeric values via JavaScript's `Number` (max safe integer: 2⁵³), so large integers become `Int` or `Double`. The native target uses heuristic string parsing that only attempts `Int` and `Double`. Use `get_int64` / `get_optional_int64` only when you are certain the value fits in a 32-bit integer and the driver returns it as `Int`.
 - **Native target: heuristic type detection.** Column values are returned as strings by libpq and converted heuristically. The single-character strings `"t"` and `"f"` are always interpreted as boolean `true`/`false`, which can conflict with actual string columns containing those values.
 - **Native target uses literal inlining.** Parameters are inlined as SQL literals rather than sent as protocol-level parameters. This is safe for all supported value types but differs from the JS target's behavior.
+- **SELECT + GROUP BY duplicate parameters.** When the same `Expr` object appears in both the SELECT list and GROUP BY clause, the renderer assigns separate `$N` placeholders to each occurrence. PostgreSQL rejects queries where a GROUP BY expression contains `$N` parameters that differ from the SELECT list. **Workaround:** wrap the expression in a subquery with an alias, then GROUP BY the alias column name in the outer query.
+
+  ```moonbit
+  // Problem: same Expr in SELECT and GROUP BY produces duplicate $N params
+  // let expr = @builder.func("TO_CHAR", [...])!
+  // .expr_as(expr, "label").group_by_expr(expr) // PostgreSQL error
+
+  // Solution: use a subquery with alias
+  let inner = @builder.select()
+    .expr_as(@builder.func("TO_CHAR", [@builder.col("created_at"), @builder.val_str("YYYY-MM")])!, "month")
+    .columns(["amount"])
+    .from("orders")
+
+  @builder.select()
+    .columns(["month"])
+    .expr_as(@builder.func("SUM", [@builder.col("amount")])!, "total")
+    .from_sub(inner, "sub")
+    .group_by("month")
+    .build()
+  ```
 
 ## License
 

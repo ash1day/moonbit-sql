@@ -553,6 +553,117 @@ test "get_optional_int64: column not found" {
 }
 
 // ========================================================
+// get_json
+// ========================================================
+
+test "get_json: existing column" {
+  let row : @pg.Row = { data: { "meta": @pg.Json("{\"key\":\"value\"}") } }
+  assert_eq(get_json(row, "meta"), "{\"key\":\"value\"}")
+}
+
+test "get_json: column not found" {
+  let row : @pg.Row = { data: {} }
+  let result = try {
+    Result::Ok(get_json(row, "meta"))
+  } catch {
+    err => Err(err)
+  }
+  match result {
+    Err(DecodeError::ColumnNotFound("meta")) => ()
+    _ => fail("expected ColumnNotFound")
+  }
+}
+
+test "get_json: type mismatch from Str" {
+  let row : @pg.Row = { data: { "meta": @pg.Str("not json") } }
+  let result = try {
+    Result::Ok(get_json(row, "meta"))
+  } catch {
+    err => Err(err)
+  }
+  match result {
+    Err(DecodeError::TypeMismatch("meta", _)) => ()
+    _ => fail("expected TypeMismatch")
+  }
+}
+
+test "get_json: type mismatch from Int" {
+  let row : @pg.Row = { data: { "meta": @pg.Int(42) } }
+  let result = try {
+    Result::Ok(get_json(row, "meta"))
+  } catch {
+    err => Err(err)
+  }
+  match result {
+    Err(DecodeError::TypeMismatch("meta", _)) => ()
+    _ => fail("expected TypeMismatch")
+  }
+}
+
+test "get_json: null value raises NullValue" {
+  let row : @pg.Row = { data: { "meta": @pg.Null } }
+  let result = try {
+    Result::Ok(get_json(row, "meta"))
+  } catch {
+    err => Err(err)
+  }
+  match result {
+    Err(DecodeError::NullValue("meta")) => ()
+    _ => fail("expected NullValue")
+  }
+}
+
+test "get_json: empty json object" {
+  let row : @pg.Row = { data: { "meta": @pg.Json("{}") } }
+  assert_eq(get_json(row, "meta"), "{}")
+}
+
+// ========================================================
+// get_optional_json
+// ========================================================
+
+test "get_optional_json: present value" {
+  let row : @pg.Row = { data: { "meta": @pg.Json("[1,2,3]") } }
+  assert_eq(get_optional_json(row, "meta"), Some("[1,2,3]"))
+}
+
+test "get_optional_json: null value" {
+  let row : @pg.Row = { data: { "meta": @pg.Null } }
+  assert_eq(get_optional_json(row, "meta"), None)
+}
+
+test "get_optional_json: empty json object" {
+  let row : @pg.Row = { data: { "meta": @pg.Json("{}") } }
+  assert_eq(get_optional_json(row, "meta"), Some("{}"))
+}
+
+test "get_optional_json: column not found" {
+  let row : @pg.Row = { data: {} }
+  let result = try {
+    Result::Ok(get_optional_json(row, "meta"))
+  } catch {
+    err => Err(err)
+  }
+  match result {
+    Err(DecodeError::ColumnNotFound("meta")) => ()
+    _ => fail("expected ColumnNotFound")
+  }
+}
+
+test "get_optional_json: type mismatch from Int" {
+  let row : @pg.Row = { data: { "meta": @pg.Int(42) } }
+  let result = try {
+    Result::Ok(get_optional_json(row, "meta"))
+  } catch {
+    err => Err(err)
+  }
+  match result {
+    Err(DecodeError::TypeMismatch("meta", _)) => ()
+    _ => fail("expected TypeMismatch")
+  }
+}
+
+// ========================================================
 // Cross-type boundary tests
 // ========================================================
 
@@ -591,6 +702,7 @@ test "row with multiple columns" {
       "score": @pg.Double(99.5),
       "big_id": @pg.Int64(1000000000L),
       "bio": @pg.Null,
+      "meta": @pg.Json("{\"role\":\"admin\"}"),
     },
   }
   assert_eq(get_int(row, "id"), 1)
@@ -599,4 +711,5 @@ test "row with multiple columns" {
   assert_eq(get_double(row, "score"), 99.5)
   assert_eq(get_int64(row, "big_id"), 1000000000L)
   assert_eq(get_optional_str(row, "bio"), None)
+  assert_eq(get_json(row, "meta"), "{\"role\":\"admin\"}")
 }

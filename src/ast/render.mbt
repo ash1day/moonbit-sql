@@ -61,19 +61,19 @@ fn binop_to_sql(op : BinOp) -> String {
 }
 
 /// Validate that a function name contains only safe characters
-fn validate_func_name(name : String) -> String {
+fn validate_func_name(name : String) -> String raise {
   for c in name {
     let valid = (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') ||
                 (c >= '0' && c <= '9') || c == '_' || c == '.'
     if not(valid) {
-      abort("moonbit-sql: invalid character in function name: \{name}")
+      raise InvalidFuncName("invalid character in function name: \{name}")
     }
   }
   name
 }
 
 /// Render an Expr to SQL
-fn render_expr(ctx : RenderContext, expr : Expr) -> Unit {
+fn render_expr(ctx : RenderContext, expr : Expr) -> Unit raise {
   match expr {
     Asterisk => ctx.write("*")
     Column(col_ref) => render_column_ref(ctx, col_ref)
@@ -243,7 +243,7 @@ fn render_expr(ctx : RenderContext, expr : Expr) -> Unit {
 }
 
 /// Render a TableRef to SQL
-fn render_table_ref(ctx : RenderContext, table : TableRef) -> Unit {
+fn render_table_ref(ctx : RenderContext, table : TableRef) -> Unit raise {
   match table {
     Table(name) => ctx.write_identifier(name)
     TableAlias(name, als) => {
@@ -266,7 +266,7 @@ fn render_table_ref(ctx : RenderContext, table : TableRef) -> Unit {
 }
 
 /// Render a SelectItem to SQL
-fn render_select_item(ctx : RenderContext, item : SelectItem) -> Unit {
+fn render_select_item(ctx : RenderContext, item : SelectItem) -> Unit raise {
   match item {
     Expr(expr) => render_expr(ctx, expr)
     ExprAlias(expr, als) => {
@@ -294,7 +294,7 @@ fn join_type_to_sql(jt : JoinType) -> String {
 }
 
 /// Render the body of a SELECT statement (without CTEs) into a context
-fn render_select_body(ctx : RenderContext, stmt : SelectStatement) -> Unit {
+fn render_select_body(ctx : RenderContext, stmt : SelectStatement) -> Unit raise {
   ctx.write("SELECT ")
   if stmt.distinct {
     ctx.write("DISTINCT ")
@@ -404,7 +404,7 @@ fn render_select_body(ctx : RenderContext, stmt : SelectStatement) -> Unit {
 }
 
 /// Render a SELECT statement to a CompiledQuery
-pub fn render_select(stmt : SelectStatement) -> CompiledQuery {
+pub fn render_select(stmt : SelectStatement) -> CompiledQuery raise {
   let ctx = RenderContext::new()
   // CTEs (WITH clause)
   if not(stmt.ctes.is_empty()) {
@@ -425,7 +425,7 @@ pub fn render_select(stmt : SelectStatement) -> CompiledQuery {
 }
 
 /// Render an INSERT statement to a CompiledQuery
-pub fn render_insert(stmt : InsertStatement) -> CompiledQuery {
+pub fn render_insert(stmt : InsertStatement) -> CompiledQuery raise {
   let ctx = RenderContext::new()
   ctx.write("INSERT INTO ")
   render_table_ref(ctx, stmt.table)
@@ -505,7 +505,7 @@ pub fn render_insert(stmt : InsertStatement) -> CompiledQuery {
 }
 
 /// Render an UPDATE statement to a CompiledQuery
-pub fn render_update(stmt : UpdateStatement) -> CompiledQuery {
+pub fn render_update(stmt : UpdateStatement) -> CompiledQuery raise {
   let ctx = RenderContext::new()
   ctx.write("UPDATE ")
   render_table_ref(ctx, stmt.table)
@@ -540,7 +540,7 @@ pub fn render_update(stmt : UpdateStatement) -> CompiledQuery {
 }
 
 /// Render a DELETE statement to a CompiledQuery
-pub fn render_delete(stmt : DeleteStatement) -> CompiledQuery {
+pub fn render_delete(stmt : DeleteStatement) -> CompiledQuery raise {
   let ctx = RenderContext::new()
   ctx.write("DELETE FROM ")
   render_table_ref(ctx, stmt.table)

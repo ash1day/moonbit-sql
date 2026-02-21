@@ -453,6 +453,11 @@ pub suberror DecodeError {
     .build()
   ```
 
+## Inspiration
+
+- [sea-query](https://github.com/SeaQL/sea-query) (Rust) — ADT-based AST and expression design
+- [squirrel](https://github.com/Masterminds/squirrel) (Go) — Builder API design
+
 ## License
 
 MIT

@@ -4,6 +4,7 @@ pub struct Connection {
 }
 
 /// Connect to a PostgreSQL database
+#deprecated("Use a PostgreSQL driver with ast.CompiledQuery; see README migration notes")
 pub async fn Connection::connect(url : String) -> Connection raise {
   let client = js_create_client(url)
   try {

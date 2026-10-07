@@ -12,6 +12,7 @@ fn get_column(row : @pg.Row, col : String) -> @pg.ColumnValue raise {
 }
 
 /// Extract a String value from a Row by column name
+#deprecated("Use your PostgreSQL driver result types; legacy pg/decode are deprecated")
 pub fn get_str(row : @pg.Row, col : String) -> String raise {
   let v = get_column(row, col)
   match v {
@@ -22,6 +23,7 @@ pub fn get_str(row : @pg.Row, col : String) -> String raise {
 }
 
 /// Extract an Int value from a Row by column name
+#deprecated("Use your PostgreSQL driver result types; legacy pg/decode are deprecated")
 pub fn get_int(row : @pg.Row, col : String) -> Int raise {
   let v = get_column(row, col)
   match v {
@@ -32,6 +34,7 @@ pub fn get_int(row : @pg.Row, col : String) -> Int raise {
 }
 
 /// Extract a Bool value from a Row by column name
+#deprecated("Use your PostgreSQL driver result types; legacy pg/decode are deprecated")
 pub fn get_bool(row : @pg.Row, col : String) -> Bool raise {
   let v = get_column(row, col)
   match v {
@@ -42,6 +45,7 @@ pub fn get_bool(row : @pg.Row, col : String) -> Bool raise {
 }
 
 /// Extract a Double value from a Row by column name
+#deprecated("Use your PostgreSQL driver result types; legacy pg/decode are deprecated")
 pub fn get_double(row : @pg.Row, col : String) -> Double raise {
   let v = get_column(row, col)
   match v {
@@ -53,6 +57,7 @@ pub fn get_double(row : @pg.Row, col : String) -> Double raise {
 }
 
 /// Extract an Int64 value from a Row by column name
+#deprecated("Use your PostgreSQL driver result types; legacy pg/decode are deprecated")
 pub fn get_int64(row : @pg.Row, col : String) -> Int64 raise {
   let v = get_column(row, col)
   match v {
@@ -65,6 +70,7 @@ pub fn get_int64(row : @pg.Row, col : String) -> Int64 raise {
 
 /// Extract an optional String value from a Row by column name
 /// Returns None if the column is NULL, raises ColumnNotFound if column missing
+#deprecated("Use your PostgreSQL driver result types; legacy pg/decode are deprecated")
 pub fn get_optional_str(row : @pg.Row, col : String) -> String? raise {
   let v = get_column(row, col)
   match v {
@@ -75,6 +81,7 @@ pub fn get_optional_str(row : @pg.Row, col : String) -> String? raise {
 }
 
 /// Extract an optional Int value from a Row by column name
+#deprecated("Use your PostgreSQL driver result types; legacy pg/decode are deprecated")
 pub fn get_optional_int(row : @pg.Row, col : String) -> Int? raise {
   let v = get_column(row, col)
   match v {
@@ -85,6 +92,7 @@ pub fn get_optional_int(row : @pg.Row, col : String) -> Int? raise {
 }
 
 /// Extract an optional Double value from a Row by column name
+#deprecated("Use your PostgreSQL driver result types; legacy pg/decode are deprecated")
 pub fn get_optional_double(row : @pg.Row, col : String) -> Double? raise {
   let v = get_column(row, col)
   match v {
@@ -96,6 +104,7 @@ pub fn get_optional_double(row : @pg.Row, col : String) -> Double? raise {
 }
 
 /// Extract an optional Int64 value from a Row by column name
+#deprecated("Use your PostgreSQL driver result types; legacy pg/decode are deprecated")
 pub fn get_optional_int64(row : @pg.Row, col : String) -> Int64? raise {
   let v = get_column(row, col)
   match v {
@@ -107,6 +116,7 @@ pub fn get_optional_int64(row : @pg.Row, col : String) -> Int64? raise {
 }
 
 /// Extract an optional Bool value from a Row by column name
+#deprecated("Use your PostgreSQL driver result types; legacy pg/decode are deprecated")
 pub fn get_optional_bool(row : @pg.Row, col : String) -> Bool? raise {
   let v = get_column(row, col)
   match v {
@@ -117,6 +127,7 @@ pub fn get_optional_bool(row : @pg.Row, col : String) -> Bool? raise {
 }
 
 /// Extract a JSON String value from a Row by column name
+#deprecated("Use your PostgreSQL driver result types; legacy pg/decode are deprecated")
 pub fn get_json(row : @pg.Row, col : String) -> String raise {
   let v = get_column(row, col)
   match v {
@@ -128,6 +139,7 @@ pub fn get_json(row : @pg.Row, col : String) -> String raise {
 
 /// Extract an optional JSON String value from a Row by column name
 /// Returns None if the column is NULL, raises ColumnNotFound if column missing
+#deprecated("Use your PostgreSQL driver result types; legacy pg/decode are deprecated")
 pub fn get_optional_json(row : @pg.Row, col : String) -> String? raise {
   let v = get_column(row, col)
   match v {

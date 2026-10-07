@@ -13,9 +13,9 @@ pub(all) enum ColumnValue {
   Double(Double)
   Str(String)
   Json(String)
-} derive(Show, Eq)
+} derive(Show, Debug, Eq)
 
 /// A single database row: column name -> value
 pub(all) struct Row {
   data : Map[String, ColumnValue]
-} derive(Show, Eq)
+} derive(Show, Debug, Eq)

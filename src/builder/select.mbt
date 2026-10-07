@@ -441,9 +441,9 @@ pub fn SelectBuilder::except_all(
   self
 }
 
-/// Build the internal SelectStatement (for use by subqueries, CTEs, etc.)
+/// Build an independent snapshot for subqueries, CTEs, or direct AST use.
 pub fn SelectBuilder::build_statement(self : SelectBuilder) -> @ast.SelectStatement {
-  {
+  let stmt : @ast.SelectStatement = {
     distinct: self.distinct_,
     columns: self.columns,
     from: self.from_,
@@ -463,6 +463,7 @@ pub fn SelectBuilder::build_statement(self : SelectBuilder) -> @ast.SelectStatem
     set_ops: self.set_ops_,
     ctes: self.ctes_,
   }
+  stmt.snapshot()
 }
 
 /// Build the SelectBuilder into a CompiledQuery

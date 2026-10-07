@@ -4,6 +4,7 @@ pub struct Connection {
 }
 
 /// Connect to a PostgreSQL database
+#deprecated("Use a PostgreSQL driver with ast.CompiledQuery; see README migration notes")
 pub fn Connection::connect(url : String) -> Connection raise {
   match @postgres.connect(url) {
     Ok(conn) => { client: conn }

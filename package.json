@@ -1,6 +1,11 @@
 {
   "name": "moonbit-sql",
-  "dependencies": {
+  "private": true,
+  "scripts": {
+    "test:postgres": "node scripts/test-postgres.mjs",
+    "test:readme": "python3 scripts/check-readme.py"
+  },
+  "devDependencies": {
     "pg": "^8.13.0"
   }
 }

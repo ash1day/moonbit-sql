@@ -1,21 +1,10 @@
 /// Opaque handle to a pg Client instance
 type PgClient
 
-/// Create a new pg Client with a connection string.
-/// Also installs a global unhandledRejection handler so that async errors
-/// (e.g. query failures that propagate out of `async fn main`) are printed
-/// and cause a non-zero exit instead of silently hanging the process.
+/// Create a new pg Client. The application owns process-level error handling.
 extern "js" fn js_create_client(url : String) -> PgClient =
   #| (url) => {
   #|   const { Client } = require('pg');
-  #|   if (!process._moonbitSqlUnhandledRejectionInstalled) {
-  #|     process._moonbitSqlUnhandledRejectionInstalled = true;
-  #|     process.on('unhandledRejection', (reason) => {
-  #|       const msg = reason instanceof Error ? reason.message : String(reason);
-  #|       console.error('FATAL (unhandled async error):', msg);
-  #|       process.exit(1);
-  #|     });
-  #|   }
   #|   return new Client({ connectionString: url });
   #| }
 

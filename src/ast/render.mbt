@@ -1,23 +1,28 @@
+///|
 /// Internal state for rendering SQL with parameterized queries
 priv struct RenderContext {
   buf : StringBuilder
   params : Array[Value]
 }
 
+///|
 fn RenderContext::new() -> RenderContext {
   { buf: StringBuilder::new(), params: [] }
 }
 
+///|
 fn RenderContext::write(self : RenderContext, s : String) -> Unit {
   self.buf.write_string(s)
 }
 
+///|
 fn RenderContext::write_param(self : RenderContext, value : Value) -> Unit {
   self.params.push(value)
   let n = self.params.length()
   self.buf.write_string("$\{n}")
 }
 
+///|
 fn RenderContext::write_identifier(self : RenderContext, name : String) -> Unit {
   let escaped = name.replace_all(old="\"", new="\"\"")
   self.buf.write_string("\"")
@@ -25,10 +30,12 @@ fn RenderContext::write_identifier(self : RenderContext, name : String) -> Unit 
   self.buf.write_string("\"")
 }
 
+///|
 fn RenderContext::to_sql(self : RenderContext) -> String {
   self.buf.to_string()
 }
 
+///|
 /// Render a ColumnRef to SQL
 fn render_column_ref(ctx : RenderContext, col : ColumnRef) -> Unit {
   match col {
@@ -41,6 +48,7 @@ fn render_column_ref(ctx : RenderContext, col : ColumnRef) -> Unit {
   }
 }
 
+///|
 /// Render a BinOp to its SQL operator string
 fn binop_to_sql(op : BinOp) -> String {
   match op {
@@ -60,29 +68,70 @@ fn binop_to_sql(op : BinOp) -> String {
   }
 }
 
+///|
 /// Validate that a function name contains only safe characters
 fn validate_func_name(name : String) -> String raise {
   for c in name {
-    let valid = (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') ||
-                (c >= '0' && c <= '9') || c == '_' || c == '.'
-    if not(valid) {
+    let valid = (c >= 'a' && c <= 'z') ||
+      (c >= 'A' && c <= 'Z') ||
+      (c >= '0' && c <= '9') ||
+      c == '_' ||
+      c == '.'
+    if !valid {
       raise InvalidFuncName("invalid character in function name: \{name}")
     }
   }
   name
 }
 
-/// Render an Expr to SQL
-fn render_expr(ctx : RenderContext, expr : Expr) -> Unit raise {
+///|
+/// Memoize only GROUP BY expressions, within one SELECT scope. Equal literal
+/// values in unrelated SQL contexts must keep independent parameter identities.
+priv struct GroupedExpressions {
+  expressions : Array[Expr]
+  rendered : Array[(Expr, String)]
+}
+
+///|
+fn render_expr(
+  ctx : RenderContext,
+  expr : Expr,
+  grouping? : GroupedExpressions? = None,
+) -> Unit raise {
+  if grouping is Some(memo) && memo.expressions.contains(expr) {
+    match memo.rendered.search_by(fn(item) { item.0 == expr }) {
+      Some(index) => ctx.write(memo.rendered[index].1)
+      None => {
+        let part : RenderContext = {
+          buf: StringBuilder::new(),
+          params: ctx.params,
+        }
+        render_expr_body(part, expr, grouping~)
+        let sql = part.to_sql()
+        memo.rendered.push((expr, sql))
+        ctx.write(sql)
+      }
+    }
+  } else {
+    render_expr_body(ctx, expr, grouping~)
+  }
+}
+
+///|
+fn render_expr_body(
+  ctx : RenderContext,
+  expr : Expr,
+  grouping? : GroupedExpressions? = None,
+) -> Unit raise {
   match expr {
     Asterisk => ctx.write("*")
     Column(col_ref) => render_column_ref(ctx, col_ref)
     Value(v) => ctx.write_param(v)
     Binary(left, op, right) => {
       ctx.write("(")
-      render_expr(ctx, left)
+      render_expr(ctx, left, grouping~)
       ctx.write(" " + binop_to_sql(op) + " ")
-      render_expr(ctx, right)
+      render_expr(ctx, right, grouping~)
       ctx.write(")")
     }
     Unary(op, expr) => {
@@ -92,60 +141,58 @@ fn render_expr(ctx : RenderContext, expr : Expr) -> Unit raise {
       }
       ctx.write("(")
       ctx.write(op_str)
-      render_expr(ctx, expr)
+      render_expr(ctx, expr, grouping~)
       ctx.write(")")
     }
     IsNull(expr) => {
-      render_expr(ctx, expr)
+      render_expr(ctx, expr, grouping~)
       ctx.write(" IS NULL")
     }
     IsNotNull(expr) => {
-      render_expr(ctx, expr)
+      render_expr(ctx, expr, grouping~)
       ctx.write(" IS NOT NULL")
     }
-    InList(expr, values) => {
+    InList(expr, values) =>
       if values.is_empty() {
         ctx.write("FALSE")
       } else {
-        render_expr(ctx, expr)
+        render_expr(ctx, expr, grouping~)
         ctx.write(" IN (")
         for i, v in values {
           if i > 0 {
             ctx.write(", ")
           }
-          render_expr(ctx, v)
+          render_expr(ctx, v, grouping~)
         }
         ctx.write(")")
       }
-    }
-    NotInList(expr, values) => {
+    NotInList(expr, values) =>
       if values.is_empty() {
         ctx.write("TRUE")
       } else {
-        render_expr(ctx, expr)
+        render_expr(ctx, expr, grouping~)
         ctx.write(" NOT IN (")
         for i, v in values {
           if i > 0 {
             ctx.write(", ")
           }
-          render_expr(ctx, v)
+          render_expr(ctx, v, grouping~)
         }
         ctx.write(")")
       }
-    }
     Between(expr, low, high) => {
-      render_expr(ctx, expr)
+      render_expr(ctx, expr, grouping~)
       ctx.write(" BETWEEN ")
-      render_expr(ctx, low)
+      render_expr(ctx, low, grouping~)
       ctx.write(" AND ")
-      render_expr(ctx, high)
+      render_expr(ctx, high, grouping~)
     }
     NotBetween(expr, low, high) => {
-      render_expr(ctx, expr)
+      render_expr(ctx, expr, grouping~)
       ctx.write(" NOT BETWEEN ")
-      render_expr(ctx, low)
+      render_expr(ctx, low, grouping~)
       ctx.write(" AND ")
-      render_expr(ctx, high)
+      render_expr(ctx, high, grouping~)
     }
     Func(func_call) => {
       ctx.write(validate_func_name(func_call.name))
@@ -154,39 +201,39 @@ fn render_expr(ctx : RenderContext, expr : Expr) -> Unit raise {
         if i > 0 {
           ctx.write(", ")
         }
-        render_expr(ctx, arg)
+        render_expr(ctx, arg, grouping~)
       }
       ctx.write(")")
     }
     InSubquery(expr, sub_stmt) => {
-      render_expr(ctx, expr)
+      render_expr(ctx, expr, grouping~)
       ctx.write(" IN (")
-      render_select_body(ctx, sub_stmt)
+      render_select_query(ctx, sub_stmt)
       ctx.write(")")
     }
     NotInSubquery(expr, sub_stmt) => {
-      render_expr(ctx, expr)
+      render_expr(ctx, expr, grouping~)
       ctx.write(" NOT IN (")
-      render_select_body(ctx, sub_stmt)
+      render_select_query(ctx, sub_stmt)
       ctx.write(")")
     }
     Subquery(sub_stmt) => {
       ctx.write("(")
-      render_select_body(ctx, sub_stmt)
+      render_select_query(ctx, sub_stmt)
       ctx.write(")")
     }
     CaseExpr(branches, else_) => {
       ctx.write("CASE")
       for branch in branches {
         ctx.write(" WHEN ")
-        render_expr(ctx, branch.condition)
+        render_expr(ctx, branch.condition, grouping~)
         ctx.write(" THEN ")
-        render_expr(ctx, branch.result)
+        render_expr(ctx, branch.result, grouping~)
       }
       match else_ {
         Some(default) => {
           ctx.write(" ELSE ")
-          render_expr(ctx, default)
+          render_expr(ctx, default, grouping~)
         }
         None => ()
       }
@@ -194,12 +241,12 @@ fn render_expr(ctx : RenderContext, expr : Expr) -> Unit raise {
     }
     Exists(sub_stmt) => {
       ctx.write("EXISTS (")
-      render_select_body(ctx, sub_stmt)
+      render_select_query(ctx, sub_stmt)
       ctx.write(")")
     }
     NotExists(sub_stmt) => {
       ctx.write("NOT EXISTS (")
-      render_select_body(ctx, sub_stmt)
+      render_select_query(ctx, sub_stmt)
       ctx.write(")")
     }
     Raw(sql) => ctx.write(sql)
@@ -210,20 +257,20 @@ fn render_expr(ctx : RenderContext, expr : Expr) -> Unit raise {
         if i > 0 {
           ctx.write(", ")
         }
-        render_expr(ctx, arg)
+        render_expr(ctx, arg, grouping~)
       }
       ctx.write(") OVER (")
-      if not(win_spec.partition_by.is_empty()) {
+      if !win_spec.partition_by.is_empty() {
         ctx.write("PARTITION BY ")
         for i, expr in win_spec.partition_by {
           if i > 0 {
             ctx.write(", ")
           }
-          render_expr(ctx, expr)
+          render_expr(ctx, expr, grouping~)
         }
       }
-      if not(win_spec.order_by.is_empty()) {
-        if not(win_spec.partition_by.is_empty()) {
+      if !win_spec.order_by.is_empty() {
+        if !win_spec.partition_by.is_empty() {
           ctx.write(" ")
         }
         ctx.write("ORDER BY ")
@@ -231,7 +278,7 @@ fn render_expr(ctx : RenderContext, expr : Expr) -> Unit raise {
           if i > 0 {
             ctx.write(", ")
           }
-          render_expr(ctx, item.expr)
+          render_expr(ctx, item.expr, grouping~)
           match item.order {
             Asc => ctx.write(" ASC")
             Desc => ctx.write(" DESC")
@@ -243,6 +290,7 @@ fn render_expr(ctx : RenderContext, expr : Expr) -> Unit raise {
   }
 }
 
+///|
 /// Render a TableRef to SQL
 fn render_table_ref(ctx : RenderContext, table : TableRef) -> Unit raise {
   match table {
@@ -259,19 +307,24 @@ fn render_table_ref(ctx : RenderContext, table : TableRef) -> Unit raise {
     }
     SubQuery(sub_stmt, als) => {
       ctx.write("(")
-      render_select_body(ctx, sub_stmt)
+      render_select_query(ctx, sub_stmt)
       ctx.write(") AS ")
       ctx.write_identifier(als)
     }
   }
 }
 
+///|
 /// Render a SelectItem to SQL
-fn render_select_item(ctx : RenderContext, item : SelectItem) -> Unit raise {
+fn render_select_item(
+  ctx : RenderContext,
+  item : SelectItem,
+  grouping? : GroupedExpressions? = None,
+) -> Unit raise {
   match item {
-    Expr(expr) => render_expr(ctx, expr)
+    Expr(expr) => render_expr(ctx, expr, grouping~)
     ExprAlias(expr, als) => {
-      render_expr(ctx, expr)
+      render_expr(ctx, expr, grouping~)
       ctx.write(" AS ")
       ctx.write_identifier(als)
     }
@@ -283,6 +336,7 @@ fn render_select_item(ctx : RenderContext, item : SelectItem) -> Unit raise {
   }
 }
 
+///|
 /// Render a JoinType to SQL
 fn join_type_to_sql(jt : JoinType) -> String {
   match jt {
@@ -294,8 +348,33 @@ fn join_type_to_sql(jt : JoinType) -> String {
   }
 }
 
+///|
 /// Render the body of a SELECT statement (without CTEs) into a context
-fn render_select_body(ctx : RenderContext, stmt : SelectStatement) -> Unit raise {
+fn render_select_body(
+  ctx : RenderContext,
+  stmt : SelectStatement,
+) -> Unit raise {
+  let grouping : GroupedExpressions = {
+    expressions: stmt.group_by.filter(fn(expr) {
+      match expr {
+        Value(_) => false
+        _ => true
+      }
+    }),
+    rendered: [],
+  }
+  // The builder chains left-to-right. INTERSECT has higher SQL precedence,
+  // so close a grouped prefix whenever it follows UNION or EXCEPT.
+  let grouped_prefixes = stmt.set_ops.mapi(fn(i, op) {
+    i > 0 &&
+    is_intersection(op.kind) &&
+    !is_intersection(stmt.set_ops[i - 1].kind)
+  })
+  for grouped in grouped_prefixes {
+    if grouped {
+      ctx.write("(")
+    }
+  }
   ctx.write("SELECT ")
   if stmt.distinct {
     ctx.write("DISTINCT ")
@@ -308,7 +387,7 @@ fn render_select_body(ctx : RenderContext, stmt : SelectStatement) -> Unit raise
       if i > 0 {
         ctx.write(", ")
       }
-      render_select_item(ctx, col)
+      render_select_item(ctx, col, grouping=Some(grouping))
     }
   }
   // FROM
@@ -342,25 +421,28 @@ fn render_select_body(ctx : RenderContext, stmt : SelectStatement) -> Unit raise
     None => ()
   }
   // GROUP BY
-  if not(stmt.group_by.is_empty()) {
+  if !stmt.group_by.is_empty() {
     ctx.write(" GROUP BY ")
     for i, expr in stmt.group_by {
       if i > 0 {
         ctx.write(", ")
       }
-      render_expr(ctx, expr)
+      render_expr(ctx, expr, grouping=Some(grouping))
     }
   }
   // HAVING
   match stmt.having {
     Some(expr) => {
       ctx.write(" HAVING ")
-      render_expr(ctx, expr)
+      render_expr(ctx, expr, grouping=Some(grouping))
     }
     None => ()
   }
   // Set operations (UNION, INTERSECT, EXCEPT)
-  for set_op in stmt.set_ops {
+  for i, set_op in stmt.set_ops {
+    if grouped_prefixes[i] {
+      ctx.write(")")
+    }
     let keyword = match set_op.kind {
       Union => " UNION "
       UnionAll => " UNION ALL "
@@ -370,16 +452,16 @@ fn render_select_body(ctx : RenderContext, stmt : SelectStatement) -> Unit raise
       ExceptAll => " EXCEPT ALL "
     }
     ctx.write(keyword)
-    render_select_body(ctx, set_op.select)
+    render_set_operand(ctx, set_op.select)
   }
   // ORDER BY
-  if not(stmt.order_by.is_empty()) {
+  if !stmt.order_by.is_empty() {
     ctx.write(" ORDER BY ")
     for i, item in stmt.order_by {
       if i > 0 {
         ctx.write(", ")
       }
-      render_expr(ctx, item.expr)
+      render_expr(ctx, item.expr, grouping=Some(grouping))
       match item.order {
         Asc => ctx.write(" ASC")
         Desc => ctx.write(" DESC")
@@ -404,11 +486,42 @@ fn render_select_body(ctx : RenderContext, stmt : SelectStatement) -> Unit raise
   }
 }
 
-/// Render a SELECT statement to a CompiledQuery
-pub fn render_select(stmt : SelectStatement) -> CompiledQuery raise {
-  let ctx = RenderContext::new()
+///|
+fn is_intersection(kind : SetOpKind) -> Bool {
+  match kind {
+    Intersect | IntersectAll => true
+    _ => false
+  }
+}
+
+///|
+/// Parentheses keep an operand's WITH, set operations and trailing clauses local.
+fn render_set_operand(
+  ctx : RenderContext,
+  stmt : SelectStatement,
+) -> Unit raise {
+  let grouped = !stmt.ctes.is_empty() ||
+    !stmt.set_ops.is_empty() ||
+    !stmt.order_by.is_empty() ||
+    stmt.limit != None ||
+    stmt.offset != None
+  if grouped {
+    ctx.write("(")
+  }
+  render_select_query(ctx, stmt)
+  if grouped {
+    ctx.write(")")
+  }
+}
+
+///|
+/// Render WITH and the SELECT into the caller's parameter context.
+fn render_select_query(
+  ctx : RenderContext,
+  stmt : SelectStatement,
+) -> Unit raise {
   // CTEs (WITH clause)
-  if not(stmt.ctes.is_empty()) {
+  if !stmt.ctes.is_empty() {
     ctx.write("WITH ")
     for i, cte in stmt.ctes {
       if i > 0 {
@@ -416,22 +529,30 @@ pub fn render_select(stmt : SelectStatement) -> CompiledQuery raise {
       }
       ctx.write_identifier(cte.name)
       ctx.write(" AS (")
-      render_select_body(ctx, cte.query)
+      render_select_query(ctx, cte.query)
       ctx.write(")")
     }
     ctx.write(" ")
   }
   render_select_body(ctx, stmt)
+}
+
+///|
+/// Render a complete SELECT, preserving WITH at every nesting level.
+pub fn render_select(stmt : SelectStatement) -> CompiledQuery raise {
+  let ctx = RenderContext::new()
+  render_select_query(ctx, stmt)
   { sql: ctx.to_sql(), params: ctx.params }
 }
 
+///|
 /// Render an INSERT statement to a CompiledQuery
 pub fn render_insert(stmt : InsertStatement) -> CompiledQuery raise {
   let ctx = RenderContext::new()
   ctx.write("INSERT INTO ")
   render_table_ref(ctx, stmt.table)
   // Columns
-  if not(stmt.columns.is_empty()) {
+  if !stmt.columns.is_empty() {
     ctx.write(" (")
     for i, col in stmt.columns {
       if i > 0 {
@@ -445,7 +566,7 @@ pub fn render_insert(stmt : InsertStatement) -> CompiledQuery raise {
   match stmt.select_ {
     Some(sub_stmt) => {
       ctx.write(" ")
-      render_select_body(ctx, sub_stmt)
+      render_select_query(ctx, sub_stmt)
     }
     None => {
       ctx.write(" VALUES ")
@@ -493,7 +614,7 @@ pub fn render_insert(stmt : InsertStatement) -> CompiledQuery raise {
     None => ()
   }
   // RETURNING
-  if not(stmt.returning.is_empty()) {
+  if !stmt.returning.is_empty() {
     ctx.write(" RETURNING ")
     for i, item in stmt.returning {
       if i > 0 {
@@ -505,6 +626,7 @@ pub fn render_insert(stmt : InsertStatement) -> CompiledQuery raise {
   { sql: ctx.to_sql(), params: ctx.params }
 }
 
+///|
 /// Render an UPDATE statement to a CompiledQuery
 pub fn render_update(stmt : UpdateStatement) -> CompiledQuery raise {
   let ctx = RenderContext::new()
@@ -528,7 +650,7 @@ pub fn render_update(stmt : UpdateStatement) -> CompiledQuery raise {
     None => ()
   }
   // RETURNING
-  if not(stmt.returning.is_empty()) {
+  if !stmt.returning.is_empty() {
     ctx.write(" RETURNING ")
     for i, item in stmt.returning {
       if i > 0 {
@@ -540,6 +662,7 @@ pub fn render_update(stmt : UpdateStatement) -> CompiledQuery raise {
   { sql: ctx.to_sql(), params: ctx.params }
 }
 
+///|
 /// Render a DELETE statement to a CompiledQuery
 pub fn render_delete(stmt : DeleteStatement) -> CompiledQuery raise {
   let ctx = RenderContext::new()
@@ -554,7 +677,7 @@ pub fn render_delete(stmt : DeleteStatement) -> CompiledQuery raise {
     None => ()
   }
   // RETURNING
-  if not(stmt.returning.is_empty()) {
+  if !stmt.returning.is_empty() {
     ctx.write(" RETURNING ")
     for i, item in stmt.returning {
       if i > 0 {

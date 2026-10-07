@@ -3,25 +3,25 @@
 // ========================================================
 
 test "select all columns" {
-  let q = select().all().from("users").build()
+  let q = @builder.select().all().from("users").build()
   assert_eq(q.sql, "SELECT * FROM \"users\"")
   assert_eq(q.params, [])
 }
 
 test "select with named columns" {
-  let q = select().columns(["id", "name", "email"]).from("users").build()
+  let q = @builder.select().columns(["id", "name", "email"]).from("users").build()
   assert_eq(q.sql, "SELECT \"id\", \"name\", \"email\" FROM \"users\"")
   assert_eq(q.params, [])
 }
 
 test "select single column" {
-  let q = select().column("id").from("users").build()
+  let q = @builder.select().column("id").from("users").build()
   assert_eq(q.sql, "SELECT \"id\" FROM \"users\"")
   assert_eq(q.params, [])
 }
 
 test "select with limit and offset" {
-  let q = select()
+  let q = @builder.select()
     .columns(["character", "size_w", "size_h"])
     .from("character")
     .limit(10)
@@ -35,7 +35,7 @@ test "select with limit and offset" {
 }
 
 test "select with limit only" {
-  let q = select().all().from("users").limit(5).build()
+  let q = @builder.select().all().from("users").limit(5).build()
   assert_eq(q.sql, "SELECT * FROM \"users\" LIMIT $1")
   assert_eq(q.params, [@ast.Value::Int(5)])
 }
@@ -45,13 +45,13 @@ test "select with limit only" {
 // ========================================================
 
 test "select distinct" {
-  let q = select().distinct().columns(["name"]).from("users").build()
+  let q = @builder.select().distinct().columns(["name"]).from("users").build()
   assert_eq(q.sql, "SELECT DISTINCT \"name\" FROM \"users\"")
   assert_eq(q.params, [])
 }
 
 test "select distinct with multiple columns" {
-  let q = select()
+  let q = @builder.select()
     .distinct()
     .columns(["department", "role"])
     .from("employees")
@@ -68,10 +68,10 @@ test "select distinct with multiple columns" {
 // ========================================================
 
 test "select with where eq" {
-  let q = select()
+  let q = @builder.select()
     .columns(["character", "size_w", "size_h"])
     .from("character")
-    .where_(col("size_w").eq(val_int(3)))
+    .where_(@builder.col("size_w").eq(@builder.val_int(3)))
     .build()
   assert_eq(
     q.sql,
@@ -81,11 +81,11 @@ test "select with where eq" {
 }
 
 test "select with multiple where (AND)" {
-  let q = select()
+  let q = @builder.select()
     .columns(["character", "size_w", "size_h"])
     .from("character")
-    .where_(col("size_w").eq(val_int(3)))
-    .where_(col("size_h").eq(val_int(4)))
+    .where_(@builder.col("size_w").eq(@builder.val_int(3)))
+    .where_(@builder.col("size_h").eq(@builder.val_int(4)))
     .build()
   assert_eq(
     q.sql,
@@ -95,12 +95,12 @@ test "select with multiple where (AND)" {
 }
 
 test "select with three where conditions" {
-  let q = select()
+  let q = @builder.select()
     .columns(["character", "size_w", "size_h"])
     .from("character")
-    .where_(col("size_w").eq(val_int(3)))
-    .where_(col("size_h").eq(val_int(4)))
-    .where_(col("size_h").eq(val_int(5)))
+    .where_(@builder.col("size_w").eq(@builder.val_int(3)))
+    .where_(@builder.col("size_h").eq(@builder.val_int(4)))
+    .where_(@builder.col("size_h").eq(@builder.val_int(5)))
     .build()
   assert_eq(
     q.sql,
@@ -113,11 +113,11 @@ test "select with three where conditions" {
 }
 
 test "select with or condition" {
-  let q = select()
+  let q = @builder.select()
     .all()
     .from("users")
     .where_(
-      col("role").eq(val_str("admin")).or_(col("role").eq(val_str("mod"))),
+      @builder.col("role").eq(@builder.val_str("admin")).or_(@builder.col("role").eq(@builder.val_str("mod"))),
     )
     .build()
   assert_eq(
@@ -131,14 +131,14 @@ test "select with or condition" {
 }
 
 test "select with or three conditions" {
-  let q = select()
+  let q = @builder.select()
     .columns(["character", "size_w", "size_h"])
     .from("character")
     .where_(
-      col("size_w")
-        .eq(val_int(3))
-        .or_(col("size_h").eq(val_int(4)))
-        .or_(col("size_h").eq(val_int(5))),
+      @builder.col("size_w")
+        .eq(@builder.val_int(3))
+        .or_(@builder.col("size_h").eq(@builder.val_int(4)))
+        .or_(@builder.col("size_h").eq(@builder.val_int(5))),
     )
     .build()
   assert_eq(
@@ -152,14 +152,14 @@ test "select with or three conditions" {
 }
 
 test "select with nested and/or" {
-  let q = select()
+  let q = @builder.select()
     .all()
     .from("users")
     .where_(
-      col("a")
-        .eq(val_int(1))
-        .and_(col("b").eq(val_int(2)))
-        .or_(col("c").eq(val_int(3))),
+      @builder.col("a")
+        .eq(@builder.val_int(1))
+        .and_(@builder.col("b").eq(@builder.val_int(2)))
+        .or_(@builder.col("c").eq(@builder.val_int(3))),
     )
     .build()
   assert_eq(
@@ -174,14 +174,14 @@ test "select with nested and/or" {
 
 test "select with complex nested conditions" {
   // (A LIKE 'C' OR (D LIKE 'D' AND E LIKE 'E')) AND (F LIKE 'F' OR G LIKE 'G')
-  let q = select()
+  let q = @builder.select()
     .column("character")
     .from("character")
     .where_(
-      col("character")
+      @builder.col("character")
         .like("C")
-        .or_(col("character").like("D").and_(col("character").like("E")))
-        .and_(col("character").like("F").or_(col("character").like("G"))),
+        .or_(@builder.col("character").like("D").and_(@builder.col("character").like("E")))
+        .and_(@builder.col("character").like("F").or_(@builder.col("character").like("G"))),
     )
     .build()
   assert_eq(
@@ -205,10 +205,10 @@ test "select with complex nested conditions" {
 // ========================================================
 
 test "select with ne operator" {
-  let q = select()
+  let q = @builder.select()
     .all()
     .from("users")
-    .where_(col("status").ne(val_str("deleted")))
+    .where_(@builder.col("status").ne(@builder.val_str("deleted")))
     .build()
   assert_eq(
     q.sql,
@@ -218,10 +218,10 @@ test "select with ne operator" {
 }
 
 test "select with lt operator" {
-  let q = select()
+  let q = @builder.select()
     .all()
     .from("products")
-    .where_(col("price").lt(val_int(100)))
+    .where_(@builder.col("price").lt(@builder.val_int(100)))
     .build()
   assert_eq(
     q.sql,
@@ -231,10 +231,10 @@ test "select with lt operator" {
 }
 
 test "select with gt operator" {
-  let q = select()
+  let q = @builder.select()
     .columns(["id", "name"])
     .from("users")
-    .where_(col("age").gt(val_int(18)))
+    .where_(@builder.col("age").gt(@builder.val_int(18)))
     .build()
   assert_eq(
     q.sql,
@@ -244,10 +244,10 @@ test "select with gt operator" {
 }
 
 test "select with gte operator" {
-  let q = select()
+  let q = @builder.select()
     .all()
     .from("products")
-    .where_(col("stock").gte(val_int(0)))
+    .where_(@builder.col("stock").gte(@builder.val_int(0)))
     .build()
   assert_eq(
     q.sql,
@@ -257,10 +257,10 @@ test "select with gte operator" {
 }
 
 test "select with lte operator" {
-  let q = select()
+  let q = @builder.select()
     .all()
     .from("products")
-    .where_(col("price").lte(val_int(1000)))
+    .where_(@builder.col("price").lte(@builder.val_int(1000)))
     .build()
   assert_eq(
     q.sql,
@@ -274,10 +274,10 @@ test "select with lte operator" {
 // ========================================================
 
 test "select with is null" {
-  let q = select()
+  let q = @builder.select()
     .columns(["character"])
     .from("character")
-    .where_(col("font_id").is_null())
+    .where_(@builder.col("font_id").is_null())
     .build()
   assert_eq(
     q.sql,
@@ -287,10 +287,10 @@ test "select with is null" {
 }
 
 test "select with is not null" {
-  let q = select()
+  let q = @builder.select()
     .all()
     .from("users")
-    .where_(col("email").is_not_null())
+    .where_(@builder.col("email").is_not_null())
     .build()
   assert_eq(
     q.sql,
@@ -300,11 +300,11 @@ test "select with is not null" {
 }
 
 test "select with is null and is not null combined" {
-  let q = select()
+  let q = @builder.select()
     .columns(["character"])
     .from("character")
-    .where_(col("font_id").is_null())
-    .where_(col("character").is_not_null())
+    .where_(@builder.col("font_id").is_null())
+    .where_(@builder.col("character").is_not_null())
     .build()
   assert_eq(
     q.sql,
@@ -314,10 +314,10 @@ test "select with is null and is not null combined" {
 }
 
 test "select with is null or is not null" {
-  let q = select()
+  let q = @builder.select()
     .column("id")
     .from("glyph")
-    .where_(col("aspect").is_null().or_(col("aspect").is_not_null()))
+    .where_(@builder.col("aspect").is_null().or_(@builder.col("aspect").is_not_null()))
     .build()
   assert_eq(
     q.sql,
@@ -331,10 +331,10 @@ test "select with is null or is not null" {
 // ========================================================
 
 test "select with like" {
-  let q = select()
+  let q = @builder.select()
     .all()
     .from("users")
-    .where_(col("name").like("%Alice%"))
+    .where_(@builder.col("name").like("%Alice%"))
     .build()
   assert_eq(
     q.sql,
@@ -344,14 +344,14 @@ test "select with like" {
 }
 
 test "select with multiple like (OR)" {
-  let q = select()
+  let q = @builder.select()
     .columns(["character"])
     .from("character")
     .where_(
-      col("character")
+      @builder.col("character")
         .like("A%")
-        .or_(col("character").like("%B"))
-        .or_(col("character").like("%C%")),
+        .or_(@builder.col("character").like("%B"))
+        .or_(@builder.col("character").like("%C%")),
     )
     .build()
   assert_eq(
@@ -373,10 +373,10 @@ test "select with multiple like (OR)" {
 // ========================================================
 
 test "select with in list" {
-  let q = select()
+  let q = @builder.select()
     .all()
     .from("users")
-    .where_(col("id").in_list([val_int(1), val_int(2), val_int(3)]))
+    .where_(@builder.col("id").in_list([@builder.val_int(1), @builder.val_int(2), @builder.val_int(3)]))
     .build()
   assert_eq(
     q.sql,
@@ -389,10 +389,10 @@ test "select with in list" {
 }
 
 test "select with table-qualified in list" {
-  let q = select()
+  let q = @builder.select()
     .column("image")
     .from("glyph")
-    .where_(table_col("glyph", "aspect").in_list([val_int(3), val_int(4)]))
+    .where_(@builder.table_col("glyph", "aspect").in_list([@builder.val_int(3), @builder.val_int(4)]))
     .build()
   assert_eq(
     q.sql,
@@ -402,10 +402,10 @@ test "select with table-qualified in list" {
 }
 
 test "select with not in list" {
-  let q = select()
+  let q = @builder.select()
     .all()
     .from("users")
-    .where_(col("status").not_in_list([val_str("banned"), val_str("deleted")]))
+    .where_(@builder.col("status").not_in_list([@builder.val_str("banned"), @builder.val_str("deleted")]))
     .build()
   assert_eq(
     q.sql,
@@ -418,11 +418,11 @@ test "select with not in list" {
 }
 
 test "select with in list and like combined" {
-  let q = select()
+  let q = @builder.select()
     .all()
     .from("users")
-    .where_(col("id").in_list([val_int(1), val_int(2), val_int(3)]))
-    .where_(col("name").like("A%"))
+    .where_(@builder.col("id").in_list([@builder.val_int(1), @builder.val_int(2), @builder.val_int(3)]))
+    .where_(@builder.col("name").like("A%"))
     .build()
   assert_eq(
     q.sql,
@@ -444,10 +444,10 @@ test "select with in list and like combined" {
 // ========================================================
 
 test "select with between" {
-  let q = select()
+  let q = @builder.select()
     .all()
     .from("products")
-    .where_(col("price").between(val_int(100), val_int(500)))
+    .where_(@builder.col("price").between(@builder.val_int(100), @builder.val_int(500)))
     .build()
   assert_eq(
     q.sql,
@@ -457,10 +457,10 @@ test "select with between" {
 }
 
 test "select with between table-qualified" {
-  let q = select()
+  let q = @builder.select()
     .column("image")
     .from("glyph")
-    .where_(table_col("glyph", "aspect").between(val_int(3), val_int(5)))
+    .where_(@builder.table_col("glyph", "aspect").between(@builder.val_int(3), @builder.val_int(5)))
     .build()
   assert_eq(
     q.sql,
@@ -470,10 +470,10 @@ test "select with between table-qualified" {
 }
 
 test "select with not between" {
-  let q = select()
+  let q = @builder.select()
     .all()
     .from("products")
-    .where_(col("price").not_between(val_int(800), val_int(1000)))
+    .where_(@builder.col("price").not_between(@builder.val_int(800), @builder.val_int(1000)))
     .build()
   assert_eq(
     q.sql,
@@ -483,11 +483,11 @@ test "select with not between" {
 }
 
 test "select with between and not between combined" {
-  let q = select()
+  let q = @builder.select()
     .columns(["aspect"])
     .from("glyph")
-    .where_(col("aspect").between(val_int(3), val_int(5)))
-    .where_(col("aspect").not_between(val_int(8), val_int(10)))
+    .where_(@builder.col("aspect").between(@builder.val_int(3), @builder.val_int(5)))
+    .where_(@builder.col("aspect").not_between(@builder.val_int(8), @builder.val_int(10)))
     .build()
   assert_eq(
     q.sql,
@@ -509,8 +509,8 @@ test "select with between and not between combined" {
 // ========================================================
 
 test "select with arithmetic multiply" {
-  let q = select()
-    .expr_as(col("price").mul(col("quantity")), "total")
+  let q = @builder.select()
+    .expr_as(@builder.col("price").mul(@builder.col("quantity")), "total")
     .from("order_items")
     .build()
   assert_eq(
@@ -521,11 +521,11 @@ test "select with arithmetic multiply" {
 }
 
 test "select with arithmetic in where" {
-  let q = select()
+  let q = @builder.select()
     .column("character")
     .from("character")
     .where_(
-      col("size_w").mul(val_int(2)).eq(col("size_h").div(val_int(2))),
+      @builder.col("size_w").mul(@builder.val_int(2)).eq(@builder.col("size_h").div(@builder.val_int(2))),
     )
     .build()
   assert_eq(
@@ -537,14 +537,14 @@ test "select with arithmetic in where" {
 
 test "select with complex arithmetic" {
   // (size_w * 2) + (size_h / 3) = 4
-  let q = select()
+  let q = @builder.select()
     .columns(["character", "size_w", "size_h"])
     .from("character")
     .where_(
-      col("size_w")
-        .mul(val_int(2))
-        .add(col("size_h").div(val_int(3)))
-        .eq(val_int(4)),
+      @builder.col("size_w")
+        .mul(@builder.val_int(2))
+        .add(@builder.col("size_h").div(@builder.val_int(3)))
+        .eq(@builder.val_int(4)),
     )
     .build()
   assert_eq(
@@ -562,10 +562,10 @@ test "select with complex arithmetic" {
 // ========================================================
 
 test "select with not expression" {
-  let q = select()
+  let q = @builder.select()
     .all()
     .from("users")
-    .where_(col("active").eq(val_bool(true)).not_())
+    .where_(@builder.col("active").eq(@builder.val_bool(true)).not_())
     .build()
   assert_eq(
     q.sql,
@@ -575,8 +575,8 @@ test "select with not expression" {
 }
 
 test "select with negation" {
-  let q = select()
-    .expr(col("balance").neg())
+  let q = @builder.select()
+    .expr(@builder.col("balance").neg())
     .from("accounts")
     .build()
   assert_eq(q.sql, "SELECT (-\"balance\") FROM \"accounts\"")
@@ -588,14 +588,14 @@ test "select with negation" {
 // ========================================================
 
 test "select with count star" {
-  let q = select().expr(func("COUNT", [asterisk()])).from("users").build()
+  let q = @builder.select().expr(@builder.func("COUNT", [@builder.asterisk()])).from("users").build()
   assert_eq(q.sql, "SELECT COUNT(*) FROM \"users\"")
   assert_eq(q.params, [])
 }
 
 test "select with count star alias" {
-  let q = select()
-    .expr_as(func("COUNT", [asterisk()]), "total")
+  let q = @builder.select()
+    .expr_as(@builder.func("COUNT", [@builder.asterisk()]), "total")
     .from("users")
     .build()
   assert_eq(q.sql, "SELECT COUNT(*) AS \"total\" FROM \"users\"")
@@ -603,12 +603,12 @@ test "select with count star alias" {
 }
 
 test "select with max function" {
-  let q = select()
+  let q = @builder.select()
     .column("aspect")
-    .expr(func("MAX", [col("image")]))
+    .expr(@builder.func("MAX", [@builder.col("image")]))
     .from("glyph")
     .group_by("aspect")
-    .having(col("aspect").gt(val_int(2)))
+    .having(@builder.col("aspect").gt(@builder.val_int(2)))
     .build()
   assert_eq(
     q.sql,
@@ -618,11 +618,11 @@ test "select with max function" {
 }
 
 test "select with coalesce" {
-  let q = select()
+  let q = @builder.select()
     .expr(
-      func(
+      @builder.func(
         "COALESCE",
-        [col("nickname"), col("name"), val_str("Anonymous")],
+        [@builder.col("nickname"), @builder.col("name"), @builder.val_str("Anonymous")],
       ),
     )
     .from("users")
@@ -636,10 +636,10 @@ test "select with coalesce" {
 
 test "select with coalesce in where" {
   // COALESCE("aspect", 0) > 2
-  let q = select()
+  let q = @builder.select()
     .columns(["aspect"])
     .from("glyph")
-    .where_(func("COALESCE", [col("aspect"), val_int(0)]).gt(val_int(2)))
+    .where_(@builder.func("COALESCE", [@builder.col("aspect"), @builder.val_int(0)]).gt(@builder.val_int(2)))
     .build()
   assert_eq(
     q.sql,
@@ -649,8 +649,8 @@ test "select with coalesce in where" {
 }
 
 test "select with sum function" {
-  let q = select()
-    .expr_as(func("SUM", [col("amount")]), "total_amount")
+  let q = @builder.select()
+    .expr_as(@builder.func("SUM", [@builder.col("amount")]), "total_amount")
     .from("transactions")
     .build()
   assert_eq(
@@ -661,8 +661,8 @@ test "select with sum function" {
 }
 
 test "select with avg function" {
-  let q = select()
-    .expr_as(func("AVG", [col("price")]), "avg_price")
+  let q = @builder.select()
+    .expr_as(@builder.func("AVG", [@builder.col("price")]), "avg_price")
     .from("products")
     .build()
   assert_eq(
@@ -673,8 +673,8 @@ test "select with avg function" {
 }
 
 test "select with min function" {
-  let q = select()
-    .expr_as(func("MIN", [col("created_at")]), "earliest")
+  let q = @builder.select()
+    .expr_as(@builder.func("MIN", [@builder.col("created_at")]), "earliest")
     .from("events")
     .build()
   assert_eq(
@@ -689,8 +689,8 @@ test "select with min function" {
 // ========================================================
 
 test "select with expression alias" {
-  let q = select()
-    .expr_as(col("character"), "C")
+  let q = @builder.select()
+    .expr_as(@builder.col("character"), "C")
     .from("character")
     .build()
   assert_eq(
@@ -705,19 +705,19 @@ test "select with expression alias" {
 // ========================================================
 
 test "select with table all columns" {
-  let q = select().table_all_columns("users").from("users").build()
+  let q = @builder.select().table_all_columns("users").from("users").build()
   assert_eq(q.sql, "SELECT \"users\".* FROM \"users\"")
   assert_eq(q.params, [])
 }
 
 test "select with table all columns and named column" {
-  let q = select()
+  let q = @builder.select()
     .table_all_columns("character")
     .expr(@ast.Expr::Column(@ast.ColumnRef::TableColumn("font", "name")))
     .from("character")
     .join(
       "font",
-      table_col("character", "font_id").eq(table_col("font", "id")),
+      @builder.table_col("character", "font_id").eq(@builder.table_col("font", "id")),
     )
     .build()
   assert_eq(
@@ -728,7 +728,7 @@ test "select with table all columns and named column" {
 }
 
 test "select with from_as alias" {
-  let q = select()
+  let q = @builder.select()
     .columns(["id", "name"])
     .from_as("users", "u")
     .build()
@@ -737,16 +737,16 @@ test "select with from_as alias" {
 }
 
 test "select with schema-qualified table" {
-  let q = select().all().from_schema("public", "users").build()
+  let q = @builder.select().all().from_schema("public", "users").build()
   assert_eq(q.sql, "SELECT * FROM \"public\".\"users\"")
   assert_eq(q.params, [])
 }
 
 test "select with table qualified columns" {
-  let q = select()
+  let q = @builder.select()
     .all()
     .from("users")
-    .where_(table_col("users", "id").eq(val_int(1)))
+    .where_(@builder.table_col("users", "id").eq(@builder.val_int(1)))
     .build()
   assert_eq(
     q.sql,
@@ -760,12 +760,12 @@ test "select with table qualified columns" {
 // ========================================================
 
 test "select with inner join" {
-  let q = select()
+  let q = @builder.select()
     .columns(["name", "total"])
     .from("users")
     .join(
       "orders",
-      table_col("users", "id").eq(table_col("orders", "user_id")),
+      @builder.table_col("users", "id").eq(@builder.table_col("orders", "user_id")),
     )
     .build()
   assert_eq(
@@ -776,12 +776,12 @@ test "select with inner join" {
 }
 
 test "select with left join" {
-  let q = select()
+  let q = @builder.select()
     .columns(["character"])
     .from("character")
     .left_join(
       "font",
-      table_col("character", "font_id").eq(table_col("font", "id")),
+      @builder.table_col("character", "font_id").eq(@builder.table_col("font", "id")),
     )
     .build()
   assert_eq(
@@ -792,12 +792,12 @@ test "select with left join" {
 }
 
 test "select with right join" {
-  let q = select()
+  let q = @builder.select()
     .columns(["name"])
     .from("users")
     .right_join(
       "orders",
-      table_col("users", "id").eq(table_col("orders", "user_id")),
+      @builder.table_col("users", "id").eq(@builder.table_col("orders", "user_id")),
     )
     .build()
   assert_eq(
@@ -808,12 +808,12 @@ test "select with right join" {
 }
 
 test "select with full join" {
-  let q = select()
+  let q = @builder.select()
     .all()
     .from("left_table")
     .full_join(
       "right_table",
-      table_col("left_table", "id").eq(table_col("right_table", "id")),
+      @builder.table_col("left_table", "id").eq(@builder.table_col("right_table", "id")),
     )
     .build()
   assert_eq(
@@ -824,7 +824,7 @@ test "select with full join" {
 }
 
 test "select with cross join" {
-  let q = select().all().from("colors").cross_join("sizes").build()
+  let q = @builder.select().all().from("colors").cross_join("sizes").build()
   assert_eq(
     q.sql,
     "SELECT * FROM \"colors\" CROSS JOIN \"sizes\"",
@@ -833,16 +833,16 @@ test "select with cross join" {
 }
 
 test "select with multiple joins" {
-  let q = select()
+  let q = @builder.select()
     .all()
     .from("orders")
     .join(
       "users",
-      table_col("orders", "user_id").eq(table_col("users", "id")),
+      @builder.table_col("orders", "user_id").eq(@builder.table_col("users", "id")),
     )
     .left_join(
       "products",
-      table_col("orders", "product_id").eq(table_col("products", "id")),
+      @builder.table_col("orders", "product_id").eq(@builder.table_col("products", "id")),
     )
     .build()
   assert_eq(
@@ -853,16 +853,16 @@ test "select with multiple joins" {
 }
 
 test "select with left join then inner join" {
-  let q = select()
+  let q = @builder.select()
     .columns(["character"])
     .from("character")
     .left_join(
       "font",
-      table_col("character", "font_id").eq(table_col("font", "id")),
+      @builder.table_col("character", "font_id").eq(@builder.table_col("font", "id")),
     )
     .join(
       "glyph",
-      table_col("character", "character").eq(table_col("glyph", "image")),
+      @builder.table_col("character", "character").eq(@builder.table_col("glyph", "image")),
     )
     .build()
   assert_eq(
@@ -873,14 +873,14 @@ test "select with left join then inner join" {
 }
 
 test "select with join compound on condition" {
-  let q = select()
+  let q = @builder.select()
     .columns(["character"])
     .from("character")
     .left_join(
       "font",
-      table_col("character", "font_id")
-        .eq(table_col("font", "id"))
-        .and_(table_col("character", "font_id").eq(table_col("font", "id"))),
+      @builder.table_col("character", "font_id")
+        .eq(@builder.table_col("font", "id"))
+        .and_(@builder.table_col("character", "font_id").eq(@builder.table_col("font", "id"))),
     )
     .build()
   assert_eq(
@@ -891,14 +891,14 @@ test "select with join compound on condition" {
 }
 
 test "select with join and where" {
-  let q = select()
+  let q = @builder.select()
     .columns(["name", "total"])
     .from("users")
     .join(
       "orders",
-      table_col("users", "id").eq(table_col("orders", "user_id")),
+      @builder.table_col("users", "id").eq(@builder.table_col("orders", "user_id")),
     )
-    .where_(col("total").gt(val_int(100)))
+    .where_(@builder.col("total").gt(@builder.val_int(100)))
     .build()
   assert_eq(
     q.sql,
@@ -912,12 +912,12 @@ test "select with join and where" {
 // ========================================================
 
 test "select with group by and having" {
-  let q = select()
+  let q = @builder.select()
     .column("department")
-    .expr(func("COUNT", [asterisk()]))
+    .expr(@builder.func("COUNT", [@builder.asterisk()]))
     .from("employees")
     .group_by("department")
-    .having(func("COUNT", [asterisk()]).gt(val_int(5)))
+    .having(@builder.func("COUNT", [@builder.asterisk()]).gt(@builder.val_int(5)))
     .build()
   assert_eq(
     q.sql,
@@ -927,13 +927,13 @@ test "select with group by and having" {
 }
 
 test "select with group by table-qualified" {
-  let q = select()
+  let q = @builder.select()
     .columns(["id", "aspect"])
-    .expr(func("MAX", [col("image")]))
+    .expr(@builder.func("MAX", [@builder.col("image")]))
     .from("glyph")
     .group_by("id")
     .group_by("aspect")
-    .having(col("aspect").gt(val_int(2)))
+    .having(@builder.col("aspect").gt(@builder.val_int(2)))
     .build()
   assert_eq(
     q.sql,
@@ -947,7 +947,7 @@ test "select with group by table-qualified" {
 // ========================================================
 
 test "select with order by asc" {
-  let q = select()
+  let q = @builder.select()
     .all()
     .from("users")
     .order_by("name", @ast.Asc)
@@ -962,7 +962,7 @@ test "select with order by asc" {
 }
 
 test "select with multiple order by" {
-  let q = select()
+  let q = @builder.select()
     .all()
     .from("users")
     .order_by("last_name", @ast.Asc)
@@ -976,10 +976,10 @@ test "select with multiple order by" {
 }
 
 test "select with order by table-qualified" {
-  let q = select()
+  let q = @builder.select()
     .columns(["aspect"])
     .from("glyph")
-    .where_(func("COALESCE", [col("aspect"), val_int(0)]).gt(val_int(2)))
+    .where_(@builder.func("COALESCE", [@builder.col("aspect"), @builder.val_int(0)]).gt(@builder.val_int(2)))
     .order_by("image", @ast.Desc)
     .order_by_table("glyph", "aspect", @ast.Asc)
     .build()
@@ -995,10 +995,10 @@ test "select with order by table-qualified" {
 // ========================================================
 
 test "select with null parameter" {
-  let q = select()
+  let q = @builder.select()
     .all()
     .from("users")
-    .where_(col("name").eq(val_null()))
+    .where_(@builder.col("name").eq(@builder.val_null()))
     .build()
   assert_eq(
     q.sql,
@@ -1008,10 +1008,10 @@ test "select with null parameter" {
 }
 
 test "select with double value" {
-  let q = select()
+  let q = @builder.select()
     .all()
     .from("products")
-    .where_(col("rating").gte(val_double(4.5)))
+    .where_(@builder.col("rating").gte(@builder.val_double(4.5)))
     .build()
   assert_eq(
     q.sql,
@@ -1021,10 +1021,10 @@ test "select with double value" {
 }
 
 test "select with int64 value" {
-  let q = select()
+  let q = @builder.select()
     .all()
     .from("events")
-    .where_(col("timestamp").gt(val_int64(1700000000L)))
+    .where_(@builder.col("timestamp").gt(@builder.val_int64(1700000000L)))
     .build()
   assert_eq(
     q.sql,
@@ -1034,10 +1034,10 @@ test "select with int64 value" {
 }
 
 test "select with bool value" {
-  let q = select()
+  let q = @builder.select()
     .all()
     .from("users")
-    .where_(col("active").eq(val_bool(true)))
+    .where_(@builder.col("active").eq(@builder.val_bool(true)))
     .build()
   assert_eq(
     q.sql,
@@ -1047,10 +1047,10 @@ test "select with bool value" {
 }
 
 test "select with string value" {
-  let q = select()
+  let q = @builder.select()
     .columns(["character"])
     .from("character")
-    .where_(col("character").eq(val_str("A")))
+    .where_(@builder.col("character").eq(@builder.val_str("A")))
     .build()
   assert_eq(
     q.sql,
@@ -1064,11 +1064,11 @@ test "select with string value" {
 // ========================================================
 
 test "select param numbering across clauses" {
-  let q = select()
+  let q = @builder.select()
     .all()
     .from("users")
-    .where_(col("age").gt(val_int(18)))
-    .where_(col("name").like("%test%"))
+    .where_(@builder.col("age").gt(@builder.val_int(18)))
+    .where_(@builder.col("name").like("%test%"))
     .limit(10)
     .offset(0)
     .build()
@@ -1088,11 +1088,11 @@ test "select param numbering across clauses" {
 }
 
 test "select same values get separate params" {
-  let q = select()
+  let q = @builder.select()
     .all()
     .from("users")
-    .where_(col("a").eq(val_int(1)))
-    .where_(col("b").eq(val_int(1)))
+    .where_(@builder.col("a").eq(@builder.val_int(1)))
+    .where_(@builder.col("b").eq(@builder.val_int(1)))
     .build()
   assert_eq(
     q.sql,
@@ -1106,9 +1106,9 @@ test "select same values get separate params" {
 // ========================================================
 
 test "insert basic" {
-  let q = insert_into("users")
+  let q = @builder.insert_into("users")
     .columns(["name", "email"])
-    .values([val_str("Alice"), val_str("alice@example.com")])
+    .values([@builder.val_str("Alice"), @builder.val_str("alice@example.com")])
     .build()
   assert_eq(
     q.sql,
@@ -1124,9 +1124,9 @@ test "insert basic" {
 }
 
 test "insert with double value" {
-  let q = insert_into("glyph")
+  let q = @builder.insert_into("glyph")
     .columns(["image", "aspect"])
-    .values([val_str("04108048"), val_double(3.1415)])
+    .values([@builder.val_str("04108048"), @builder.val_double(3.1415)])
     .build()
   assert_eq(
     q.sql,
@@ -1139,10 +1139,10 @@ test "insert with double value" {
 }
 
 test "insert multi-row" {
-  let q = insert_into("users")
+  let q = @builder.insert_into("users")
     .columns(["name", "email"])
-    .values([val_str("Alice"), val_str("alice@example.com")])
-    .values([val_str("Bob"), val_str("bob@example.com")])
+    .values([@builder.val_str("Alice"), @builder.val_str("alice@example.com")])
+    .values([@builder.val_str("Bob"), @builder.val_str("bob@example.com")])
     .build()
   assert_eq(
     q.sql,
@@ -1160,10 +1160,10 @@ test "insert multi-row" {
 }
 
 test "insert multi-row with null" {
-  let q = insert_into("glyph")
+  let q = @builder.insert_into("glyph")
     .columns(["image", "aspect"])
-    .values([val_str("image1"), val_double(3.1415)])
-    .values([val_null(), val_double(2.1345)])
+    .values([@builder.val_str("image1"), @builder.val_double(3.1415)])
+    .values([@builder.val_null(), @builder.val_double(2.1345)])
     .build()
   assert_eq(
     q.sql,
@@ -1185,9 +1185,9 @@ test "insert multi-row with null" {
 // ========================================================
 
 test "insert with returning" {
-  let q = insert_into("users")
+  let q = @builder.insert_into("users")
     .columns(["name", "email"])
-    .values([val_str("Bob"), val_str("bob@example.com")])
+    .values([@builder.val_str("Bob"), @builder.val_str("bob@example.com")])
     .returning(["id"])
     .build()
   assert_eq(
@@ -1201,9 +1201,9 @@ test "insert with returning" {
 }
 
 test "insert with multiple returning" {
-  let q = insert_into("users")
+  let q = @builder.insert_into("users")
     .columns(["name"])
-    .values([val_str("Charlie")])
+    .values([@builder.val_str("Charlie")])
     .returning(["id", "created_at"])
     .build()
   assert_eq(
@@ -1218,10 +1218,10 @@ test "insert with multiple returning" {
 // ========================================================
 
 test "update basic" {
-  let q = update("users")
-    .set("name", val_str("Bob"))
-    .set("active", val_bool(true))
-    .where_(col("id").eq(val_int(1)))
+  let q = @builder.update("users")
+    .set("name", @builder.val_str("Bob"))
+    .set("active", @builder.val_bool(true))
+    .where_(@builder.col("id").eq(@builder.val_int(1)))
     .build()
   assert_eq(
     q.sql,
@@ -1238,18 +1238,18 @@ test "update basic" {
 }
 
 test "update without where" {
-  let q = update("settings").set("value", val_str("default")).build()
+  let q = @builder.update("settings").set("value", @builder.val_str("default")).build()
   assert_eq(q.sql, "UPDATE \"settings\" SET \"value\" = $1")
   assert_eq(q.params, [@ast.Value::String("default")])
 }
 
 test "update with multiple set and where" {
-  let q = update("products")
-    .set("name", val_str("Widget"))
-    .set("price", val_int(999))
-    .set("active", val_bool(false))
-    .where_(col("id").eq(val_int(42)))
-    .where_(col("version").eq(val_int(3)))
+  let q = @builder.update("products")
+    .set("name", @builder.val_str("Widget"))
+    .set("price", @builder.val_int(999))
+    .set("active", @builder.val_bool(false))
+    .where_(@builder.col("id").eq(@builder.val_int(42)))
+    .where_(@builder.col("version").eq(@builder.val_int(3)))
     .build()
   assert_eq(
     q.sql,
@@ -1269,9 +1269,9 @@ test "update with multiple set and where" {
 
 test "update set column to expression" {
   // SET "aspect" = "aspect" + 1
-  let q = update("glyph")
-    .set("aspect", col("aspect").add(val_int(1)))
-    .where_(col("id").eq(val_int(1)))
+  let q = @builder.update("glyph")
+    .set("aspect", @builder.col("aspect").add(@builder.val_int(1)))
+    .where_(@builder.col("id").eq(@builder.val_int(1)))
     .build()
   assert_eq(
     q.sql,
@@ -1285,9 +1285,9 @@ test "update set column to expression" {
 // ========================================================
 
 test "update with returning" {
-  let q = update("users")
-    .set("name", val_str("Updated"))
-    .where_(col("id").eq(val_int(1)))
+  let q = @builder.update("users")
+    .set("name", @builder.val_str("Updated"))
+    .where_(@builder.col("id").eq(@builder.val_int(1)))
     .returning(["id", "name"])
     .build()
   assert_eq(
@@ -1305,21 +1305,21 @@ test "update with returning" {
 // ========================================================
 
 test "delete basic" {
-  let q = delete_from("users").where_(col("id").eq(val_int(42))).build()
+  let q = @builder.delete_from("users").where_(@builder.col("id").eq(@builder.val_int(42))).build()
   assert_eq(q.sql, "DELETE FROM \"users\" WHERE (\"id\" = $1)")
   assert_eq(q.params, [@ast.Value::Int(42)])
 }
 
 test "delete without where" {
-  let q = delete_from("temp_data").build()
+  let q = @builder.delete_from("temp_data").build()
   assert_eq(q.sql, "DELETE FROM \"temp_data\"")
   assert_eq(q.params, [])
 }
 
 test "delete with multiple where" {
-  let q = delete_from("logs")
-    .where_(col("level").eq(val_str("debug")))
-    .where_(col("age_days").gt(val_int(30)))
+  let q = @builder.delete_from("logs")
+    .where_(@builder.col("level").eq(@builder.val_str("debug")))
+    .where_(@builder.col("age_days").gt(@builder.val_int(30)))
     .build()
   assert_eq(
     q.sql,
@@ -1336,8 +1336,8 @@ test "delete with multiple where" {
 // ========================================================
 
 test "delete with returning" {
-  let q = delete_from("users")
-    .where_(col("active").eq(val_bool(false)))
+  let q = @builder.delete_from("users")
+    .where_(@builder.col("active").eq(@builder.val_bool(false)))
     .returning(["id"])
     .build()
   assert_eq(
@@ -1348,8 +1348,8 @@ test "delete with returning" {
 }
 
 test "delete with returning multiple columns" {
-  let q = delete_from("glyph")
-    .where_(col("id").eq(val_int(1)))
+  let q = @builder.delete_from("glyph")
+    .where_(@builder.col("id").eq(@builder.val_int(1)))
     .returning(["id", "image"])
     .build()
   assert_eq(
@@ -1364,32 +1364,32 @@ test "delete with returning multiple columns" {
 // ========================================================
 
 test "select with empty columns defaults to star" {
-  let q = select().from("users").build()
+  let q = @builder.select().from("users").build()
   assert_eq(q.sql, "SELECT * FROM \"users\"")
   assert_eq(q.params, [])
 }
 
 test "select without from clause" {
-  let q = select().expr(func("COUNT", [asterisk()])).build()
+  let q = @builder.select().expr(@builder.func("COUNT", [@builder.asterisk()])).build()
   assert_eq(q.sql, "SELECT COUNT(*)")
   assert_eq(q.params, [])
 }
 
 test "select with in_list empty array renders FALSE" {
-  let q = select()
+  let q = @builder.select()
     .all()
     .from("users")
-    .where_(col("id").in_list([]))
+    .where_(@builder.col("id").in_list([]))
     .build()
   assert_eq(q.sql, "SELECT * FROM \"users\" WHERE FALSE")
   assert_eq(q.params, [])
 }
 
 test "select with not_in_list empty array renders TRUE" {
-  let q = select()
+  let q = @builder.select()
     .all()
     .from("users")
-    .where_(col("id").not_in_list([]))
+    .where_(@builder.col("id").not_in_list([]))
     .build()
   assert_eq(
     q.sql,
@@ -1399,9 +1399,9 @@ test "select with not_in_list empty array renders TRUE" {
 }
 
 test "insert with single column single value" {
-  let q = insert_into("users")
+  let q = @builder.insert_into("users")
     .columns(["name"])
-    .values([val_str("Alice")])
+    .values([@builder.val_str("Alice")])
     .build()
   assert_eq(
     q.sql,
@@ -1411,9 +1411,9 @@ test "insert with single column single value" {
 }
 
 test "update with single set" {
-  let q = update("users")
-    .set("active", val_bool(false))
-    .where_(col("id").eq(val_int(1)))
+  let q = @builder.update("users")
+    .set("active", @builder.val_bool(false))
+    .where_(@builder.col("id").eq(@builder.val_int(1)))
     .build()
   assert_eq(
     q.sql,
@@ -1423,8 +1423,8 @@ test "update with single set" {
 }
 
 test "delete with complex where" {
-  let q = delete_from("users")
-    .where_(col("active").eq(val_bool(false)).or_(col("banned").eq(val_bool(true))))
+  let q = @builder.delete_from("users")
+    .where_(@builder.col("active").eq(@builder.val_bool(false)).or_(@builder.col("banned").eq(@builder.val_bool(true))))
     .build()
   assert_eq(
     q.sql,
@@ -1437,10 +1437,10 @@ test "delete with complex where" {
 }
 
 test "select with many params ensures sequential numbering" {
-  let q = insert_into("data")
+  let q = @builder.insert_into("data")
     .columns(["a", "b", "c", "d", "e"])
-    .values([val_int(1), val_int(2), val_int(3), val_int(4), val_int(5)])
-    .values([val_int(6), val_int(7), val_int(8), val_int(9), val_int(10)])
+    .values([@builder.val_int(1), @builder.val_int(2), @builder.val_int(3), @builder.val_int(4), @builder.val_int(5)])
+    .values([@builder.val_int(6), @builder.val_int(7), @builder.val_int(8), @builder.val_int(9), @builder.val_int(10)])
     .build()
   assert_eq(
     q.sql,
@@ -1464,11 +1464,11 @@ test "select with many params ensures sequential numbering" {
 }
 
 test "select distinct with where and order by" {
-  let q = select()
+  let q = @builder.select()
     .distinct()
     .columns(["name", "email"])
     .from("users")
-    .where_(col("active").eq(val_bool(true)))
+    .where_(@builder.col("active").eq(@builder.val_bool(true)))
     .order_by("name", @ast.Asc)
     .build()
   assert_eq(
@@ -1479,17 +1479,17 @@ test "select distinct with where and order by" {
 }
 
 test "select complex: join + where + group by + having + order by + limit" {
-  let q = select()
+  let q = @builder.select()
     .column("department")
-    .expr_as(func("COUNT", [asterisk()]), "cnt")
+    .expr_as(@builder.func("COUNT", [@builder.asterisk()]), "cnt")
     .from_as("employees", "e")
     .join(
       "departments",
-      table_col("e", "dept_id").eq(table_col("departments", "id")),
+      @builder.table_col("e", "dept_id").eq(@builder.table_col("departments", "id")),
     )
-    .where_(col("active").eq(val_bool(true)))
+    .where_(@builder.col("active").eq(@builder.val_bool(true)))
     .group_by("department")
-    .having(func("COUNT", [asterisk()]).gt(val_int(3)))
+    .having(@builder.func("COUNT", [@builder.asterisk()]).gt(@builder.val_int(3)))
     .order_by("department", @ast.Asc)
     .limit(10)
     .build()
@@ -1504,13 +1504,13 @@ test "select complex: join + where + group by + having + order by + limit" {
 }
 
 test "select is null or combined with lt" {
-  let q = select()
+  let q = @builder.select()
     .column("id")
     .from("glyph")
     .where_(
-      col("aspect")
+      @builder.col("aspect")
         .is_null()
-        .or_(col("aspect").is_not_null().and_(col("aspect").lt(val_int(8)))),
+        .or_(@builder.col("aspect").is_not_null().and_(@builder.col("aspect").lt(@builder.val_int(8)))),
     )
     .build()
   assert_eq(
@@ -1521,9 +1521,9 @@ test "select is null or combined with lt" {
 }
 
 test "update with set to null" {
-  let q = update("users")
-    .set("deleted_at", val_null())
-    .where_(col("id").eq(val_int(1)))
+  let q = @builder.update("users")
+    .set("deleted_at", @builder.val_null())
+    .where_(@builder.col("id").eq(@builder.val_int(1)))
     .build()
   assert_eq(
     q.sql,
@@ -1533,11 +1533,11 @@ test "update with set to null" {
 }
 
 test "insert three rows" {
-  let q = insert_into("items")
+  let q = @builder.insert_into("items")
     .columns(["name", "price"])
-    .values([val_str("A"), val_int(10)])
-    .values([val_str("B"), val_int(20)])
-    .values([val_str("C"), val_int(30)])
+    .values([@builder.val_str("A"), @builder.val_int(10)])
+    .values([@builder.val_str("B"), @builder.val_int(20)])
+    .values([@builder.val_str("C"), @builder.val_int(30)])
     .build()
   assert_eq(
     q.sql,
@@ -1557,11 +1557,11 @@ test "insert three rows" {
 }
 
 test "select with not in and between combined" {
-  let q = select()
+  let q = @builder.select()
     .all()
     .from("products")
-    .where_(col("category").not_in_list([val_str("hidden"), val_str("draft")]))
-    .where_(col("price").between(val_int(10), val_int(100)))
+    .where_(@builder.col("category").not_in_list([@builder.val_str("hidden"), @builder.val_str("draft")]))
+    .where_(@builder.col("price").between(@builder.val_int(10), @builder.val_int(100)))
     .build()
   assert_eq(
     q.sql,
@@ -1579,10 +1579,10 @@ test "select with not in and between combined" {
 }
 
 test "select with single in_list item" {
-  let q = select()
+  let q = @builder.select()
     .all()
     .from("users")
-    .where_(col("id").in_list([val_int(42)]))
+    .where_(@builder.col("id").in_list([@builder.val_int(42)]))
     .build()
   assert_eq(
     q.sql,
@@ -1596,7 +1596,7 @@ test "select with single in_list item" {
 // ========================================================
 
 test "identifier with double quote is escaped" {
-  let q = select().column("col\"name").from("my\"table").build()
+  let q = @builder.select().column("col\"name").from("my\"table").build()
   assert_eq(q.sql, "SELECT \"col\"\"name\" FROM \"my\"\"table\"")
 }
 
@@ -1605,12 +1605,12 @@ test "identifier with double quote is escaped" {
 // ========================================================
 
 test "function name with valid characters" {
-  let q = select().expr(func("COUNT", [asterisk()])).from("t").build()
+  let q = @builder.select().expr(@builder.func("COUNT", [@builder.asterisk()])).from("t").build()
   assert_eq(q.sql, "SELECT COUNT(*) FROM \"t\"")
 }
 
 test "function name with dot for schema qualified" {
-  let q = select().expr(func("pg_catalog.array_agg", [col("x")])).from("t").build()
+  let q = @builder.select().expr(@builder.func("pg_catalog.array_agg", [@builder.col("x")])).from("t").build()
   assert_eq(q.sql, "SELECT pg_catalog.array_agg(\"x\") FROM \"t\"")
 }
 
@@ -1619,13 +1619,13 @@ test "function name with dot for schema qualified" {
 // ========================================================
 
 test "join with alias" {
-  let q = select()
+  let q = @builder.select()
     .all()
     .from_as("users", "u")
     .join_as(
       "orders",
       "o",
-      table_col("u", "id").eq(table_col("o", "user_id")),
+      @builder.table_col("u", "id").eq(@builder.table_col("o", "user_id")),
     )
     .build()
   assert_eq(
@@ -1635,13 +1635,13 @@ test "join with alias" {
 }
 
 test "left join with alias" {
-  let q = select()
+  let q = @builder.select()
     .all()
     .from_as("users", "u")
     .left_join_as(
       "profiles",
       "p",
-      table_col("u", "id").eq(table_col("p", "user_id")),
+      @builder.table_col("u", "id").eq(@builder.table_col("p", "user_id")),
     )
     .build()
   assert_eq(
@@ -1651,13 +1651,13 @@ test "left join with alias" {
 }
 
 test "right join with alias" {
-  let q = select()
+  let q = @builder.select()
     .all()
     .from_as("users", "u")
     .right_join_as(
       "orders",
       "o",
-      table_col("u", "id").eq(table_col("o", "user_id")),
+      @builder.table_col("u", "id").eq(@builder.table_col("o", "user_id")),
     )
     .build()
   assert_eq(
@@ -1667,13 +1667,13 @@ test "right join with alias" {
 }
 
 test "full join with alias" {
-  let q = select()
+  let q = @builder.select()
     .all()
     .from("a")
     .full_join_as(
       "b",
       "bb",
-      table_col("a", "id").eq(table_col("bb", "a_id")),
+      @builder.table_col("a", "id").eq(@builder.table_col("bb", "a_id")),
     )
     .build()
   assert_eq(
@@ -1683,7 +1683,7 @@ test "full join with alias" {
 }
 
 test "cross join with alias" {
-  let q = select().all().from("colors").cross_join_as("sizes", "s").build()
+  let q = @builder.select().all().from("colors").cross_join_as("sizes", "s").build()
   assert_eq(
     q.sql,
     "SELECT * FROM \"colors\" CROSS JOIN \"sizes\" AS \"s\"",
@@ -1695,8 +1695,8 @@ test "cross join with alias" {
 // ========================================================
 
 test "select from subquery" {
-  let sub = select().columns(["id"]).from("users").where_(col("active").eq(val_bool(true)))
-  let q = select().all().from_sub(sub, "sub").build()
+  let sub = @builder.select().columns(["id"]).from("users").where_(@builder.col("active").eq(@builder.val_bool(true)))
+  let q = @builder.select().all().from_sub(sub, "sub").build()
   assert_eq(
     q.sql,
     "SELECT * FROM (SELECT \"id\" FROM \"users\" WHERE (\"active\" = $1)) AS \"sub\"",
@@ -1705,11 +1705,11 @@ test "select from subquery" {
 }
 
 test "select from subquery with where" {
-  let sub = select().columns(["id", "name"]).from("users")
-  let q = select()
+  let sub = @builder.select().columns(["id", "name"]).from("users")
+  let q = @builder.select()
     .all()
     .from_sub(sub, "u")
-    .where_(col("id").gt(val_int(10)))
+    .where_(@builder.col("id").gt(@builder.val_int(10)))
     .build()
   assert_eq(
     q.sql,
@@ -1719,13 +1719,13 @@ test "select from subquery with where" {
 }
 
 test "select from subquery with join" {
-  let sub = select().columns(["user_id", "total"]).from("orders").where_(col("total").gt(val_int(100)))
-  let q = select()
+  let sub = @builder.select().columns(["user_id", "total"]).from("orders").where_(@builder.col("total").gt(@builder.val_int(100)))
+  let q = @builder.select()
     .all()
     .from_sub(sub, "o")
     .join(
       "users",
-      table_col("o", "user_id").eq(table_col("users", "id")),
+      @builder.table_col("o", "user_id").eq(@builder.table_col("users", "id")),
     )
     .build()
   assert_eq(
@@ -1740,11 +1740,11 @@ test "select from subquery with join" {
 // ========================================================
 
 test "select with in subquery" {
-  let sub = select().column("id").from("users").where_(col("active").eq(val_bool(true)))
-  let q = select()
+  let sub = @builder.select().column("id").from("users").where_(@builder.col("active").eq(@builder.val_bool(true)))
+  let q = @builder.select()
     .all()
     .from("orders")
-    .where_(in_sub(col("user_id"), sub))
+    .where_(@builder.in_sub(@builder.col("user_id"), sub))
     .build()
   assert_eq(
     q.sql,
@@ -1754,11 +1754,11 @@ test "select with in subquery" {
 }
 
 test "select with not in subquery" {
-  let sub = select().column("id").from("banned_users")
-  let q = select()
+  let sub = @builder.select().column("id").from("banned_users")
+  let q = @builder.select()
     .all()
     .from("users")
-    .where_(not_in_sub(col("id"), sub))
+    .where_(@builder.not_in_sub(@builder.col("id"), sub))
     .build()
   assert_eq(
     q.sql,
@@ -1768,12 +1768,12 @@ test "select with not in subquery" {
 }
 
 test "select with in subquery and other conditions" {
-  let sub = select().column("user_id").from("orders").where_(col("total").gt(val_int(1000)))
-  let q = select()
+  let sub = @builder.select().column("user_id").from("orders").where_(@builder.col("total").gt(@builder.val_int(1000)))
+  let q = @builder.select()
     .all()
     .from("users")
-    .where_(in_sub(col("id"), sub))
-    .where_(col("active").eq(val_bool(true)))
+    .where_(@builder.in_sub(@builder.col("id"), sub))
+    .where_(@builder.col("active").eq(@builder.val_bool(true)))
     .build()
   assert_eq(
     q.sql,
@@ -1787,8 +1787,8 @@ test "select with in subquery and other conditions" {
 // ========================================================
 
 test "select with CTE" {
-  let cte = select().columns(["id", "name"]).from("users").where_(col("active").eq(val_bool(true)))
-  let q = select()
+  let cte = @builder.select().columns(["id", "name"]).from("users").where_(@builder.col("active").eq(@builder.val_bool(true)))
+  let q = @builder.select()
     .with_("active_users", cte)
     .all()
     .from("active_users")
@@ -1801,16 +1801,16 @@ test "select with CTE" {
 }
 
 test "select with multiple CTEs" {
-  let cte1 = select().columns(["id", "name"]).from("users").where_(col("active").eq(val_bool(true)))
-  let cte2 = select().columns(["user_id", "total"]).from("orders").where_(col("total").gt(val_int(100)))
-  let q = select()
+  let cte1 = @builder.select().columns(["id", "name"]).from("users").where_(@builder.col("active").eq(@builder.val_bool(true)))
+  let cte2 = @builder.select().columns(["user_id", "total"]).from("orders").where_(@builder.col("total").gt(@builder.val_int(100)))
+  let q = @builder.select()
     .with_("active_users", cte1)
     .with_("big_orders", cte2)
     .all()
     .from("active_users")
     .join(
       "big_orders",
-      table_col("active_users", "id").eq(table_col("big_orders", "user_id")),
+      @builder.table_col("active_users", "id").eq(@builder.table_col("big_orders", "user_id")),
     )
     .build()
   assert_eq(
@@ -1821,12 +1821,12 @@ test "select with multiple CTEs" {
 }
 
 test "select with CTE and where" {
-  let cte = select().column("id").from("users")
-  let q = select()
+  let cte = @builder.select().column("id").from("users")
+  let q = @builder.select()
     .with_("all_ids", cte)
     .all()
     .from("all_ids")
-    .where_(col("id").gt(val_int(5)))
+    .where_(@builder.col("id").gt(@builder.val_int(5)))
     .build()
   assert_eq(
     q.sql,
@@ -1840,10 +1840,10 @@ test "select with CTE and where" {
 // ========================================================
 
 test "select union" {
-  let q = select()
+  let q = @builder.select()
     .all()
     .from("table_a")
-    .union(select().all().from("table_b"))
+    .union(@builder.select().all().from("table_b"))
     .build()
   assert_eq(
     q.sql,
@@ -1853,10 +1853,10 @@ test "select union" {
 }
 
 test "select union all" {
-  let q = select()
+  let q = @builder.select()
     .all()
     .from("table_a")
-    .union_all(select().all().from("table_b"))
+    .union_all(@builder.select().all().from("table_b"))
     .build()
   assert_eq(
     q.sql,
@@ -1866,10 +1866,10 @@ test "select union all" {
 }
 
 test "select intersect" {
-  let q = select()
+  let q = @builder.select()
     .all()
     .from("table_a")
-    .intersect(select().all().from("table_b"))
+    .intersect(@builder.select().all().from("table_b"))
     .build()
   assert_eq(
     q.sql,
@@ -1879,10 +1879,10 @@ test "select intersect" {
 }
 
 test "select intersect all" {
-  let q = select()
+  let q = @builder.select()
     .all()
     .from("table_a")
-    .intersect_all(select().all().from("table_b"))
+    .intersect_all(@builder.select().all().from("table_b"))
     .build()
   assert_eq(
     q.sql,
@@ -1892,10 +1892,10 @@ test "select intersect all" {
 }
 
 test "select except" {
-  let q = select()
+  let q = @builder.select()
     .all()
     .from("table_a")
-    .except_(select().all().from("table_b"))
+    .except_(@builder.select().all().from("table_b"))
     .build()
   assert_eq(
     q.sql,
@@ -1905,10 +1905,10 @@ test "select except" {
 }
 
 test "select except all" {
-  let q = select()
+  let q = @builder.select()
     .all()
     .from("table_a")
-    .except_all(select().all().from("table_b"))
+    .except_all(@builder.select().all().from("table_b"))
     .build()
   assert_eq(
     q.sql,
@@ -1918,15 +1918,15 @@ test "select except all" {
 }
 
 test "select union with params" {
-  let q = select()
+  let q = @builder.select()
     .all()
     .from("users")
-    .where_(col("role").eq(val_str("admin")))
+    .where_(@builder.col("role").eq(@builder.val_str("admin")))
     .union(
-      select()
+      @builder.select()
         .all()
         .from("users")
-        .where_(col("role").eq(val_str("mod"))),
+        .where_(@builder.col("role").eq(@builder.val_str("mod"))),
     )
     .build()
   assert_eq(
@@ -1940,10 +1940,10 @@ test "select union with params" {
 }
 
 test "select union with order by and limit" {
-  let q = select()
+  let q = @builder.select()
     .all()
     .from("table_a")
-    .union(select().all().from("table_b"))
+    .union(@builder.select().all().from("table_b"))
     .order_by("id", @ast.Asc)
     .limit(10)
     .build()
@@ -1955,11 +1955,11 @@ test "select union with order by and limit" {
 }
 
 test "select multiple unions" {
-  let q = select()
+  let q = @builder.select()
     .all()
     .from("table_a")
-    .union(select().all().from("table_b"))
-    .union(select().all().from("table_c"))
+    .union(@builder.select().all().from("table_b"))
+    .union(@builder.select().all().from("table_c"))
     .build()
   assert_eq(
     q.sql,
@@ -1973,9 +1973,9 @@ test "select multiple unions" {
 // ========================================================
 
 test "insert on conflict do nothing" {
-  let q = insert_into("users")
+  let q = @builder.insert_into("users")
     .columns(["id", "name"])
-    .values([val_int(1), val_str("Alice")])
+    .values([@builder.val_int(1), @builder.val_str("Alice")])
     .on_conflict_do_nothing(["id"])
     .build()
   assert_eq(
@@ -1989,14 +1989,14 @@ test "insert on conflict do nothing" {
 }
 
 test "insert on conflict do update" {
-  let q = insert_into("users")
+  let q = @builder.insert_into("users")
     .columns(["id", "name", "email"])
-    .values([val_int(1), val_str("Alice"), val_str("alice@example.com")])
+    .values([@builder.val_int(1), @builder.val_str("Alice"), @builder.val_str("alice@example.com")])
     .on_conflict_do_update(
       ["id"],
       [
-        ("name", table_col("excluded", "name")),
-        ("email", table_col("excluded", "email")),
+        ("name", @builder.table_col("excluded", "name")),
+        ("email", @builder.table_col("excluded", "email")),
       ],
     )
     .build()
@@ -2015,12 +2015,12 @@ test "insert on conflict do update" {
 }
 
 test "insert on conflict do update with value" {
-  let q = insert_into("counters")
+  let q = @builder.insert_into("counters")
     .columns(["key", "value"])
-    .values([val_str("hits"), val_int(1)])
+    .values([@builder.val_str("hits"), @builder.val_int(1)])
     .on_conflict_do_update(
       ["key"],
-      [("value", table_col("counters", "value").add(val_int(1)))],
+      [("value", @builder.table_col("counters", "value").add(@builder.val_int(1)))],
     )
     .build()
   assert_eq(
@@ -2038,9 +2038,9 @@ test "insert on conflict do update with value" {
 }
 
 test "insert on conflict multiple columns" {
-  let q = insert_into("user_roles")
+  let q = @builder.insert_into("user_roles")
     .columns(["user_id", "role_id", "granted_at"])
-    .values([val_int(1), val_int(2), val_str("2024-01-01")])
+    .values([@builder.val_int(1), @builder.val_int(2), @builder.val_str("2024-01-01")])
     .on_conflict_do_nothing(["user_id", "role_id"])
     .build()
   assert_eq(
@@ -2058,12 +2058,12 @@ test "insert on conflict multiple columns" {
 }
 
 test "insert on conflict do update with returning" {
-  let q = insert_into("users")
+  let q = @builder.insert_into("users")
     .columns(["id", "name"])
-    .values([val_int(1), val_str("Alice")])
+    .values([@builder.val_int(1), @builder.val_str("Alice")])
     .on_conflict_do_update(
       ["id"],
-      [("name", table_col("excluded", "name"))],
+      [("name", @builder.table_col("excluded", "name"))],
     )
     .returning(["id", "name"])
     .build()
@@ -2082,9 +2082,9 @@ test "insert on conflict do update with returning" {
 // ========================================================
 
 test "select with row_number window function" {
-  let q = select()
+  let q = @builder.select()
     .expr_as(
-      window_func(
+      @builder.window_func(
         "ROW_NUMBER",
         [],
         partition_by=["dept"],
@@ -2102,10 +2102,10 @@ test "select with row_number window function" {
 }
 
 test "select with rank window function" {
-  let q = select()
+  let q = @builder.select()
     .column("name")
     .expr_as(
-      window_func(
+      @builder.window_func(
         "RANK",
         [],
         order_by=[("score", @ast.Desc)],
@@ -2122,13 +2122,13 @@ test "select with rank window function" {
 }
 
 test "select with sum window function" {
-  let q = select()
+  let q = @builder.select()
     .column("month")
     .column("revenue")
     .expr_as(
-      window_func(
+      @builder.window_func(
         "SUM",
-        [col("revenue")],
+        [@builder.col("revenue")],
         partition_by=["year"],
         order_by=[("month", @ast.Asc)],
       ),
@@ -2144,11 +2144,11 @@ test "select with sum window function" {
 }
 
 test "select with window function partition only" {
-  let q = select()
+  let q = @builder.select()
     .expr_as(
-      window_func(
+      @builder.window_func(
         "COUNT",
-        [asterisk()],
+        [@builder.asterisk()],
         partition_by=["dept"],
       ),
       "dept_count",
@@ -2163,9 +2163,9 @@ test "select with window function partition only" {
 }
 
 test "select with window function order only" {
-  let q = select()
+  let q = @builder.select()
     .expr_as(
-      window_func(
+      @builder.window_func(
         "ROW_NUMBER",
         [],
         order_by=[("id", @ast.Asc)],
@@ -2182,9 +2182,9 @@ test "select with window function order only" {
 }
 
 test "select with window function multiple partition and order" {
-  let q = select()
+  let q = @builder.select()
     .expr_as(
-      window_func(
+      @builder.window_func(
         "ROW_NUMBER",
         [],
         partition_by=["dept", "team"],
@@ -2206,11 +2206,11 @@ test "select with window function multiple partition and order" {
 // ========================================================
 
 test "CTE with union inside" {
-  let cte_query = select()
+  let cte_query = @builder.select()
     .column("id")
     .from("active_users")
-    .union(select().column("id").from("premium_users"))
-  let q = select()
+    .union(@builder.select().column("id").from("premium_users"))
+  let q = @builder.select()
     .with_("all_special_users", cte_query)
     .all()
     .from("all_special_users")
@@ -2227,12 +2227,12 @@ test "CTE with union inside" {
 // ========================================================
 
 test "subquery with params in nested context" {
-  let sub = select().column("id").from("users").where_(col("age").gt(val_int(18)))
-  let q = select()
+  let sub = @builder.select().column("id").from("users").where_(@builder.col("age").gt(@builder.val_int(18)))
+  let q = @builder.select()
     .all()
     .from("orders")
-    .where_(in_sub(col("user_id"), sub))
-    .where_(col("total").gt(val_int(50)))
+    .where_(@builder.in_sub(@builder.col("user_id"), sub))
+    .where_(@builder.col("total").gt(@builder.val_int(50)))
     .order_by("total", @ast.Desc)
     .limit(10)
     .build()
@@ -2252,24 +2252,24 @@ test "subquery with params in nested context" {
 
 test "insert empty values raises EmptyValues" {
   let result = try {
-    Result::Ok(insert_into("users").columns(["name"]).build())
+    Result::Ok(@builder.insert_into("users").columns(["name"]).build())
   } catch {
     err => Err(err)
   }
   match result {
-    Err(BuildError::EmptyValues(_)) => ()
+    Err(@builder.BuildError::EmptyValues(_)) => ()
     _ => fail("expected EmptyValues")
   }
 }
 
 test "update empty assignments raises EmptyAssignments" {
   let result = try {
-    Result::Ok(update("users").where_(col("id").eq(val_int(1))).build())
+    Result::Ok(@builder.update("users").where_(@builder.col("id").eq(@builder.val_int(1))).build())
   } catch {
     err => Err(err)
   }
   match result {
-    Err(BuildError::EmptyAssignments(_)) => ()
+    Err(@builder.BuildError::EmptyAssignments(_)) => ()
     _ => fail("expected EmptyAssignments")
   }
 }
@@ -2277,9 +2277,9 @@ test "update empty assignments raises EmptyAssignments" {
 test "on_conflict_do_nothing empty columns raises EmptyConflictColumns" {
   let result = try {
     Result::Ok(
-      insert_into("users")
+      @builder.insert_into("users")
         .columns(["name"])
-        .values([val_str("Alice")])
+        .values([@builder.val_str("Alice")])
         .on_conflict_do_nothing([])
         .build(),
     )
@@ -2287,7 +2287,7 @@ test "on_conflict_do_nothing empty columns raises EmptyConflictColumns" {
     err => Err(err)
   }
   match result {
-    Err(BuildError::EmptyConflictColumns(_)) => ()
+    Err(@builder.BuildError::EmptyConflictColumns(_)) => ()
     _ => fail("expected EmptyConflictColumns")
   }
 }
@@ -2295,41 +2295,41 @@ test "on_conflict_do_nothing empty columns raises EmptyConflictColumns" {
 test "on_conflict_do_update empty columns raises EmptyConflictColumns" {
   let result = try {
     Result::Ok(
-      insert_into("users")
+      @builder.insert_into("users")
         .columns(["name"])
-        .values([val_str("Alice")])
-        .on_conflict_do_update([], [("name", table_col("excluded", "name"))])
+        .values([@builder.val_str("Alice")])
+        .on_conflict_do_update([], [("name", @builder.table_col("excluded", "name"))])
         .build(),
     )
   } catch {
     err => Err(err)
   }
   match result {
-    Err(BuildError::EmptyConflictColumns(_)) => ()
+    Err(@builder.BuildError::EmptyConflictColumns(_)) => ()
     _ => fail("expected EmptyConflictColumns")
   }
 }
 
 test "func invalid name raises InvalidFuncName" {
   let result = try {
-    Result::Ok(func("COUNT(*)", []))
+    Result::Ok(@builder.func("COUNT(*)", []))
   } catch {
     err => Err(err)
   }
   match result {
-    Err(BuildError::InvalidFuncName(_)) => ()
+    Err(@builder.BuildError::InvalidFuncName(_)) => ()
     _ => fail("expected InvalidFuncName")
   }
 }
 
 test "window_func invalid name raises InvalidFuncName" {
   let result = try {
-    Result::Ok(window_func("ROW; DROP TABLE--", []))
+    Result::Ok(@builder.window_func("ROW; DROP TABLE--", []))
   } catch {
     err => Err(err)
   }
   match result {
-    Err(BuildError::InvalidFuncName(_)) => ()
+    Err(@builder.BuildError::InvalidFuncName(_)) => ()
     _ => fail("expected InvalidFuncName")
   }
 }
@@ -2339,13 +2339,13 @@ test "window_func invalid name raises InvalidFuncName" {
 // ========================================================
 
 test "having with multiple conditions AND-combined" {
-  let q = select()
+  let q = @builder.select()
     .column("dept")
-    .expr_as(func("COUNT", [asterisk()]), "cnt")
+    .expr_as(@builder.func("COUNT", [@builder.asterisk()]), "cnt")
     .from("employees")
     .group_by("dept")
-    .having(func("COUNT", [asterisk()]).gt(val_int(5)))
-    .having(func("COUNT", [asterisk()]).lt(val_int(100)))
+    .having(@builder.func("COUNT", [@builder.asterisk()]).gt(@builder.val_int(5)))
+    .having(@builder.func("COUNT", [@builder.asterisk()]).lt(@builder.val_int(100)))
     .build()
   assert_eq(
     q.sql,
@@ -2359,8 +2359,8 @@ test "having with multiple conditions AND-combined" {
 // ========================================================
 
 test "arithmetic helper: add" {
-  let q = select()
-    .expr_as(col("price").add(col("tax")), "total")
+  let q = @builder.select()
+    .expr_as(@builder.col("price").add(@builder.col("tax")), "total")
     .from("items")
     .build()
   assert_eq(
@@ -2371,8 +2371,8 @@ test "arithmetic helper: add" {
 }
 
 test "arithmetic helper: sub_" {
-  let q = select()
-    .expr_as(col("price").sub_(col("discount")), "net")
+  let q = @builder.select()
+    .expr_as(@builder.col("price").sub_(@builder.col("discount")), "net")
     .from("items")
     .build()
   assert_eq(
@@ -2383,8 +2383,8 @@ test "arithmetic helper: sub_" {
 }
 
 test "arithmetic helper: mul" {
-  let q = select()
-    .expr_as(col("price").mul(col("quantity")), "total")
+  let q = @builder.select()
+    .expr_as(@builder.col("price").mul(@builder.col("quantity")), "total")
     .from("order_items")
     .build()
   assert_eq(
@@ -2395,8 +2395,8 @@ test "arithmetic helper: mul" {
 }
 
 test "arithmetic helper: div" {
-  let q = select()
-    .expr_as(col("total").div(col("count")), "average")
+  let q = @builder.select()
+    .expr_as(@builder.col("total").div(@builder.col("count")), "average")
     .from("stats")
     .build()
   assert_eq(
@@ -2407,10 +2407,10 @@ test "arithmetic helper: div" {
 }
 
 test "arithmetic helper: not_" {
-  let q = select()
+  let q = @builder.select()
     .all()
     .from("users")
-    .where_(col("active").eq(val_bool(true)).not_())
+    .where_(@builder.col("active").eq(@builder.val_bool(true)).not_())
     .build()
   assert_eq(
     q.sql,
@@ -2420,8 +2420,8 @@ test "arithmetic helper: not_" {
 }
 
 test "arithmetic helper: neg" {
-  let q = select()
-    .expr(col("balance").neg())
+  let q = @builder.select()
+    .expr(@builder.col("balance").neg())
     .from("accounts")
     .build()
   assert_eq(q.sql, "SELECT (-\"balance\") FROM \"accounts\"")
@@ -2429,12 +2429,12 @@ test "arithmetic helper: neg" {
 }
 
 test "arithmetic helpers: combined expression" {
-  let q = select()
+  let q = @builder.select()
     .columns(["character", "size_w", "size_h"])
     .from("character")
     .where_(
-      col("size_w").mul(val_int(2)).add(col("size_h").div(val_int(3))).eq(
-        val_int(4),
+      @builder.col("size_w").mul(@builder.val_int(2)).add(@builder.col("size_h").div(@builder.val_int(3))).eq(
+        @builder.val_int(4),
       ),
     )
     .build()
@@ -2453,11 +2453,11 @@ test "arithmetic helpers: combined expression" {
 // ========================================================
 
 test "in_sub helper" {
-  let sub = select().column("id").from("active_users")
-  let q = select()
+  let sub = @builder.select().column("id").from("active_users")
+  let q = @builder.select()
     .all()
     .from("orders")
-    .where_(in_sub(col("user_id"), sub))
+    .where_(@builder.in_sub(@builder.col("user_id"), sub))
     .build()
   assert_eq(
     q.sql,
@@ -2467,11 +2467,11 @@ test "in_sub helper" {
 }
 
 test "not_in_sub helper" {
-  let sub = select().column("id").from("banned_users")
-  let q = select()
+  let sub = @builder.select().column("id").from("banned_users")
+  let q = @builder.select()
     .all()
     .from("orders")
-    .where_(not_in_sub(col("user_id"), sub))
+    .where_(@builder.not_in_sub(@builder.col("user_id"), sub))
     .build()
   assert_eq(
     q.sql,
@@ -2485,10 +2485,10 @@ test "not_in_sub helper" {
 // ========================================================
 
 test "case when single condition" {
-  let q = select()
+  let q = @builder.select()
     .expr(
-      case_()
-        .when_(col("status").eq(val_str("active")), val_str("Active"))
+      @builder.case_()
+        .when_(@builder.col("status").eq(@builder.val_str("active")), @builder.val_str("Active"))
         .end(),
     )
     .from("users")
@@ -2504,12 +2504,12 @@ test "case when single condition" {
 }
 
 test "case when two conditions with else" {
-  let q = select()
+  let q = @builder.select()
     .expr_as(
-      case_()
-        .when_(col("score").gte(val_int(90)), val_str("A"))
-        .when_(col("score").gte(val_int(70)), val_str("B"))
-        .else_(val_str("C"))
+      @builder.case_()
+        .when_(@builder.col("score").gte(@builder.val_int(90)), @builder.val_str("A"))
+        .when_(@builder.col("score").gte(@builder.val_int(70)), @builder.val_str("B"))
+        .else_(@builder.val_str("C"))
         .end(),
       "grade",
     )
@@ -2532,10 +2532,10 @@ test "case when two conditions with else" {
 }
 
 test "case when without else" {
-  let q = select()
+  let q = @builder.select()
     .expr(
-      case_()
-        .when_(col("active").eq(val_bool(true)), val_str("yes"))
+      @builder.case_()
+        .when_(@builder.col("active").eq(@builder.val_bool(true)), @builder.val_str("yes"))
         .end(),
     )
     .from("users")
@@ -2551,15 +2551,15 @@ test "case when without else" {
 }
 
 test "case when used in where clause" {
-  let q = select()
+  let q = @builder.select()
     .all()
     .from("orders")
     .where_(
-      case_()
-        .when_(col("total").gt(val_int(1000)), val_str("large"))
-        .else_(val_str("small"))
+      @builder.case_()
+        .when_(@builder.col("total").gt(@builder.val_int(1000)), @builder.val_str("large"))
+        .else_(@builder.val_str("small"))
         .end()
-        .eq(val_str("large")),
+        .eq(@builder.val_str("large")),
     )
     .build()
   assert_eq(
@@ -2578,13 +2578,13 @@ test "case when used in where clause" {
 }
 
 test "case when select expr with alias" {
-  let q = select()
+  let q = @builder.select()
     .column("name")
     .expr_as(
-      case_()
-        .when_(col("role").eq(val_str("admin")), val_int(1))
-        .when_(col("role").eq(val_str("mod")), val_int(2))
-        .else_(val_int(0))
+      @builder.case_()
+        .when_(@builder.col("role").eq(@builder.val_str("admin")), @builder.val_int(1))
+        .when_(@builder.col("role").eq(@builder.val_str("mod")), @builder.val_int(2))
+        .else_(@builder.val_int(0))
         .end(),
       "role_level",
     )
@@ -2608,12 +2608,12 @@ test "case when select expr with alias" {
 
 test "case end with no when clauses raises EmptyWhenClauses" {
   let result = try {
-    Result::Ok(case_().end())
+    Result::Ok(@builder.case_().end())
   } catch {
     err => Err(err)
   }
   match result {
-    Err(BuildError::EmptyWhenClauses(_)) => ()
+    Err(@builder.BuildError::EmptyWhenClauses(_)) => ()
     _ => fail("expected EmptyWhenClauses")
   }
 }
@@ -2623,11 +2623,11 @@ test "case end with no when clauses raises EmptyWhenClauses" {
 // ========================================================
 
 test "exists basic" {
-  let sub = select().column("id").from("orders").where_(col("user_id").eq(val_int(1)))
-  let q = select()
+  let sub = @builder.select().column("id").from("orders").where_(@builder.col("user_id").eq(@builder.val_int(1)))
+  let q = @builder.select()
     .all()
     .from("users")
-    .where_(exists_(sub))
+    .where_(@builder.exists_(sub))
     .build()
   assert_eq(
     q.sql,
@@ -2637,11 +2637,11 @@ test "exists basic" {
 }
 
 test "not exists basic" {
-  let sub = select().column("id").from("banned_users")
-  let q = select()
+  let sub = @builder.select().column("id").from("banned_users")
+  let q = @builder.select()
     .all()
     .from("users")
-    .where_(not_exists(sub))
+    .where_(@builder.not_exists(sub))
     .build()
   assert_eq(
     q.sql,
@@ -2651,15 +2651,15 @@ test "not exists basic" {
 }
 
 test "exists in where correlated style" {
-  let sub = select()
+  let sub = @builder.select()
     .column("id")
     .from("orders")
-    .where_(table_col("orders", "user_id").eq(table_col("users", "id")))
-    .where_(col("total").gt(val_int(500)))
-  let q = select()
+    .where_(@builder.table_col("orders", "user_id").eq(@builder.table_col("users", "id")))
+    .where_(@builder.col("total").gt(@builder.val_int(500)))
+  let q = @builder.select()
     .all()
     .from("users")
-    .where_(exists_(sub))
+    .where_(@builder.exists_(sub))
     .build()
   assert_eq(
     q.sql,
@@ -2669,12 +2669,12 @@ test "exists in where correlated style" {
 }
 
 test "exists combined with and condition" {
-  let sub = select().column("id").from("subscriptions").where_(col("active").eq(val_bool(true)))
-  let q = select()
+  let sub = @builder.select().column("id").from("subscriptions").where_(@builder.col("active").eq(@builder.val_bool(true)))
+  let q = @builder.select()
     .all()
     .from("users")
-    .where_(col("age").gte(val_int(18)))
-    .where_(exists_(sub))
+    .where_(@builder.col("age").gte(@builder.val_int(18)))
+    .where_(@builder.exists_(sub))
     .build()
   assert_eq(
     q.sql,
@@ -2688,8 +2688,8 @@ test "exists combined with and condition" {
 // ========================================================
 
 test "insert from select basic" {
-  let sub = select().columns(["name", "email"]).from("old_users")
-  let q = insert_into("users").columns(["name", "email"]).from_select(sub).build()
+  let sub = @builder.select().columns(["name", "email"]).from("old_users")
+  let q = @builder.insert_into("users").columns(["name", "email"]).from_select(sub).build()
   assert_eq(
     q.sql,
     "INSERT INTO \"users\" (\"name\", \"email\") SELECT \"name\", \"email\" FROM \"old_users\"",
@@ -2698,8 +2698,8 @@ test "insert from select basic" {
 }
 
 test "insert from select with columns" {
-  let sub = select().columns(["username", "email"]).from("staging").where_(col("verified").eq(val_bool(true)))
-  let q = insert_into("users").columns(["name", "email"]).from_select(sub).build()
+  let sub = @builder.select().columns(["username", "email"]).from("staging").where_(@builder.col("verified").eq(@builder.val_bool(true)))
+  let q = @builder.insert_into("users").columns(["name", "email"]).from_select(sub).build()
   assert_eq(
     q.sql,
     "INSERT INTO \"users\" (\"name\", \"email\") SELECT \"username\", \"email\" FROM \"staging\" WHERE (\"verified\" = $1)",
@@ -2708,8 +2708,8 @@ test "insert from select with columns" {
 }
 
 test "insert from select with returning" {
-  let sub = select().columns(["name", "email"]).from("temp_users")
-  let q = insert_into("users")
+  let sub = @builder.select().columns(["name", "email"]).from("temp_users")
+  let q = @builder.insert_into("users")
     .columns(["name", "email"])
     .from_select(sub)
     .returning(["id"])
@@ -2722,11 +2722,11 @@ test "insert from select with returning" {
 }
 
 test "insert from select with where in sub" {
-  let sub = select()
+  let sub = @builder.select()
     .columns(["name", "score"])
     .from("candidates")
-    .where_(col("score").gt(val_int(80)))
-  let q = insert_into("winners").columns(["name", "score"]).from_select(sub).build()
+    .where_(@builder.col("score").gt(@builder.val_int(80)))
+  let q = @builder.insert_into("winners").columns(["name", "score"]).from_select(sub).build()
   assert_eq(
     q.sql,
     "INSERT INTO \"winners\" (\"name\", \"score\") SELECT \"name\", \"score\" FROM \"candidates\" WHERE (\"score\" > $1)",
@@ -2736,11 +2736,11 @@ test "insert from select with where in sub" {
 
 test "insert values and select both set raises ConflictingInsertSource" {
   let result = try {
-    let sub = select().all().from("other")
+    let sub = @builder.select().all().from("other")
     Result::Ok(
-      insert_into("users")
+      @builder.insert_into("users")
         .columns(["name"])
-        .values([val_str("Alice")])
+        .values([@builder.val_str("Alice")])
         .from_select(sub)
         .build(),
     )
@@ -2748,18 +2748,18 @@ test "insert values and select both set raises ConflictingInsertSource" {
     err => Err(err)
   }
   match result {
-    Err(BuildError::ConflictingInsertSource(_)) => ()
+    Err(@builder.BuildError::ConflictingInsertSource(_)) => ()
     _ => fail("expected ConflictingInsertSource")
   }
 }
 
 // ========================================================
-// raw(): verbatim SQL injection
+// @builder.raw(): verbatim SQL injection
 // ========================================================
 
 test "raw in SELECT expr" {
-  let q = select()
-    .expr_as(raw("current_timestamp"), "ts")
+  let q = @builder.select()
+    .expr_as(@builder.raw("current_timestamp"), "ts")
     .from("events")
     .build()
   assert_eq(
@@ -2770,10 +2770,10 @@ test "raw in SELECT expr" {
 }
 
 test "raw in WHERE clause" {
-  let q = select()
+  let q = @builder.select()
     .column("id")
     .from("sessions")
-    .where_(raw("expires_at > now()"))
+    .where_(@builder.raw("expires_at > now()"))
     .build()
   assert_eq(
     q.sql,
@@ -2783,13 +2783,13 @@ test "raw in WHERE clause" {
 }
 
 test "raw combined with typed expr" {
-  let q = select()
+  let q = @builder.select()
     .column("id")
     .from("logs")
     .where_(
-      col("level")
-      .eq(val_str("error"))
-      .and_(raw("created_at > now() - interval '7 days'")),
+      @builder.col("level")
+      .eq(@builder.val_str("error"))
+      .and_(@builder.raw("created_at > now() - interval '7 days'")),
     )
     .build()
   assert_eq(
@@ -2800,11 +2800,11 @@ test "raw combined with typed expr" {
 }
 
 test "raw in GROUP BY via group_by_expr" {
-  let q = select()
-    .expr_as(raw("date_trunc('month', created_at)"), "month")
-    .expr_as(func("COUNT", [asterisk()]), "cnt")
+  let q = @builder.select()
+    .expr_as(@builder.raw("date_trunc('month', created_at)"), "month")
+    .expr_as(@builder.func("COUNT", [@builder.asterisk()]), "cnt")
     .from("events")
-    .group_by_expr(raw("date_trunc('month', created_at)"))
+    .group_by_expr(@builder.raw("date_trunc('month', created_at)"))
     .build()
   assert_eq(
     q.sql,

@@ -45,7 +45,7 @@ fn validate_builder_func_name(name : String) -> Unit raise {
   for c in name {
     let valid = (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' &&
     c <= '9') || c == '_' || c == '.'
-    if not(valid) {
+    if !(valid) {
       raise InvalidFuncName(name)
     }
   }

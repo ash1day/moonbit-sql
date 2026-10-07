@@ -12,7 +12,7 @@ pub(all) struct SelectStatement {
   offset : Expr?
   set_ops : Array[SetOperation]
   ctes : Array[CTE]
-} derive(Show, Eq)
+} derive(Show, Debug, Eq)
 
 /// Create an empty SelectStatement
 pub fn SelectStatement::new() -> SelectStatement {
@@ -40,7 +40,7 @@ pub(all) struct InsertStatement {
   select_ : SelectStatement?
   returning : Array[SelectItem]
   on_conflict : OnConflict?
-} derive(Show, Eq)
+} derive(Show, Debug, Eq)
 
 /// UPDATE statement AST
 pub(all) struct UpdateStatement {
@@ -48,11 +48,11 @@ pub(all) struct UpdateStatement {
   assignments : Array[(String, Expr)]
   where_ : Expr?
   returning : Array[SelectItem]
-} derive(Show, Eq)
+} derive(Show, Debug, Eq)
 
 /// DELETE statement AST
 pub(all) struct DeleteStatement {
   table : TableRef
   where_ : Expr?
   returning : Array[SelectItem]
-} derive(Show, Eq)
+} derive(Show, Debug, Eq)

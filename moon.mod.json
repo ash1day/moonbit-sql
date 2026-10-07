@@ -1,14 +1,15 @@
 {
   "name": "ash1day/sql",
-  "version": "0.1.0",
-  "deps": {
-    "moonbitlang/async": "0.16.6",
-    "mattn/postgres": "0.10.4"
-  },
+  "version": "0.2.0",
+  "deps": {},
   "readme": "README.md",
   "repository": "https://github.com/ash1day/moonbit-sql",
   "license": "MIT",
   "source": "src",
-  "keywords": ["sql", "query-builder", "postgresql"],
-  "description": "Type-safe SQL query builder for MoonBit"
+  "keywords": [
+    "sql",
+    "query-builder",
+    "postgresql"
+  ],
+  "description": "PostgreSQL query builder for MoonBit: SQL AST and bound parameters"
 }

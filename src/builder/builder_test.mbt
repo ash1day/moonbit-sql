@@ -2,24 +2,31 @@
 // SELECT: Basic queries
 // ========================================================
 
+///|
 test "select all columns" {
   let q = @builder.select().all().from("users").build()
   assert_eq(q.sql, "SELECT * FROM \"users\"")
   assert_eq(q.params, [])
 }
 
+///|
 test "select with named columns" {
-  let q = @builder.select().columns(["id", "name", "email"]).from("users").build()
+  let q = @builder.select()
+    .columns(["id", "name", "email"])
+    .from("users")
+    .build()
   assert_eq(q.sql, "SELECT \"id\", \"name\", \"email\" FROM \"users\"")
   assert_eq(q.params, [])
 }
 
+///|
 test "select single column" {
   let q = @builder.select().column("id").from("users").build()
   assert_eq(q.sql, "SELECT \"id\" FROM \"users\"")
   assert_eq(q.params, [])
 }
 
+///|
 test "select with limit and offset" {
   let q = @builder.select()
     .columns(["character", "size_w", "size_h"])
@@ -34,6 +41,7 @@ test "select with limit and offset" {
   assert_eq(q.params, [@ast.Value::Int(10), @ast.Value::Int(100)])
 }
 
+///|
 test "select with limit only" {
   let q = @builder.select().all().from("users").limit(5).build()
   assert_eq(q.sql, "SELECT * FROM \"users\" LIMIT $1")
@@ -44,12 +52,14 @@ test "select with limit only" {
 // SELECT: DISTINCT
 // ========================================================
 
+///|
 test "select distinct" {
   let q = @builder.select().distinct().columns(["name"]).from("users").build()
   assert_eq(q.sql, "SELECT DISTINCT \"name\" FROM \"users\"")
   assert_eq(q.params, [])
 }
 
+///|
 test "select distinct with multiple columns" {
   let q = @builder.select()
     .distinct()
@@ -67,6 +77,7 @@ test "select distinct with multiple columns" {
 // SELECT: WHERE conditions
 // ========================================================
 
+///|
 test "select with where eq" {
   let q = @builder.select()
     .columns(["character", "size_w", "size_h"])
@@ -80,6 +91,7 @@ test "select with where eq" {
   assert_eq(q.params, [@ast.Value::Int(3)])
 }
 
+///|
 test "select with multiple where (AND)" {
   let q = @builder.select()
     .columns(["character", "size_w", "size_h"])
@@ -94,6 +106,7 @@ test "select with multiple where (AND)" {
   assert_eq(q.params, [@ast.Value::Int(3), @ast.Value::Int(4)])
 }
 
+///|
 test "select with three where conditions" {
   let q = @builder.select()
     .columns(["character", "size_w", "size_h"])
@@ -106,72 +119,78 @@ test "select with three where conditions" {
     q.sql,
     "SELECT \"character\", \"size_w\", \"size_h\" FROM \"character\" WHERE (((\"size_w\" = $1) AND (\"size_h\" = $2)) AND (\"size_h\" = $3))",
   )
-  assert_eq(
-    q.params,
-    [@ast.Value::Int(3), @ast.Value::Int(4), @ast.Value::Int(5)],
-  )
+  assert_eq(q.params, [
+    @ast.Value::Int(3),
+    @ast.Value::Int(4),
+    @ast.Value::Int(5),
+  ])
 }
 
+///|
 test "select with or condition" {
   let q = @builder.select()
     .all()
     .from("users")
     .where_(
-      @builder.col("role").eq(@builder.val_str("admin")).or_(@builder.col("role").eq(@builder.val_str("mod"))),
+      @builder.col("role")
+      .eq(@builder.val_str("admin"))
+      .or_(@builder.col("role").eq(@builder.val_str("mod"))),
     )
     .build()
   assert_eq(
     q.sql,
     "SELECT * FROM \"users\" WHERE ((\"role\" = $1) OR (\"role\" = $2))",
   )
-  assert_eq(
-    q.params,
-    [@ast.Value::String("admin"), @ast.Value::String("mod")],
-  )
+  assert_eq(q.params, [@ast.Value::String("admin"), @ast.Value::String("mod")])
 }
 
+///|
 test "select with or three conditions" {
   let q = @builder.select()
     .columns(["character", "size_w", "size_h"])
     .from("character")
     .where_(
       @builder.col("size_w")
-        .eq(@builder.val_int(3))
-        .or_(@builder.col("size_h").eq(@builder.val_int(4)))
-        .or_(@builder.col("size_h").eq(@builder.val_int(5))),
+      .eq(@builder.val_int(3))
+      .or_(@builder.col("size_h").eq(@builder.val_int(4)))
+      .or_(@builder.col("size_h").eq(@builder.val_int(5))),
     )
     .build()
   assert_eq(
     q.sql,
     "SELECT \"character\", \"size_w\", \"size_h\" FROM \"character\" WHERE (((\"size_w\" = $1) OR (\"size_h\" = $2)) OR (\"size_h\" = $3))",
   )
-  assert_eq(
-    q.params,
-    [@ast.Value::Int(3), @ast.Value::Int(4), @ast.Value::Int(5)],
-  )
+  assert_eq(q.params, [
+    @ast.Value::Int(3),
+    @ast.Value::Int(4),
+    @ast.Value::Int(5),
+  ])
 }
 
+///|
 test "select with nested and/or" {
   let q = @builder.select()
     .all()
     .from("users")
     .where_(
       @builder.col("a")
-        .eq(@builder.val_int(1))
-        .and_(@builder.col("b").eq(@builder.val_int(2)))
-        .or_(@builder.col("c").eq(@builder.val_int(3))),
+      .eq(@builder.val_int(1))
+      .and_(@builder.col("b").eq(@builder.val_int(2)))
+      .or_(@builder.col("c").eq(@builder.val_int(3))),
     )
     .build()
   assert_eq(
     q.sql,
     "SELECT * FROM \"users\" WHERE (((\"a\" = $1) AND (\"b\" = $2)) OR (\"c\" = $3))",
   )
-  assert_eq(
-    q.params,
-    [@ast.Value::Int(1), @ast.Value::Int(2), @ast.Value::Int(3)],
-  )
+  assert_eq(q.params, [
+    @ast.Value::Int(1),
+    @ast.Value::Int(2),
+    @ast.Value::Int(3),
+  ])
 }
 
+///|
 test "select with complex nested conditions" {
   // (A LIKE 'C' OR (D LIKE 'D' AND E LIKE 'E')) AND (F LIKE 'F' OR G LIKE 'G')
   let q = @builder.select()
@@ -179,57 +198,59 @@ test "select with complex nested conditions" {
     .from("character")
     .where_(
       @builder.col("character")
-        .like("C")
-        .or_(@builder.col("character").like("D").and_(@builder.col("character").like("E")))
-        .and_(@builder.col("character").like("F").or_(@builder.col("character").like("G"))),
+      .like("C")
+      .or_(
+        @builder.col("character")
+        .like("D")
+        .and_(@builder.col("character").like("E")),
+      )
+      .and_(
+        @builder.col("character")
+        .like("F")
+        .or_(@builder.col("character").like("G")),
+      ),
     )
     .build()
   assert_eq(
     q.sql,
     "SELECT \"character\" FROM \"character\" WHERE (((\"character\" LIKE $1) OR ((\"character\" LIKE $2) AND (\"character\" LIKE $3))) AND ((\"character\" LIKE $4) OR (\"character\" LIKE $5)))",
   )
-  assert_eq(
-    q.params,
-    [
-      @ast.Value::String("C"),
-      @ast.Value::String("D"),
-      @ast.Value::String("E"),
-      @ast.Value::String("F"),
-      @ast.Value::String("G"),
-    ],
-  )
+  assert_eq(q.params, [
+    @ast.Value::String("C"),
+    @ast.Value::String("D"),
+    @ast.Value::String("E"),
+    @ast.Value::String("F"),
+    @ast.Value::String("G"),
+  ])
 }
 
 // ========================================================
 // SELECT: Comparison operators
 // ========================================================
 
+///|
 test "select with ne operator" {
   let q = @builder.select()
     .all()
     .from("users")
     .where_(@builder.col("status").ne(@builder.val_str("deleted")))
     .build()
-  assert_eq(
-    q.sql,
-    "SELECT * FROM \"users\" WHERE (\"status\" <> $1)",
-  )
+  assert_eq(q.sql, "SELECT * FROM \"users\" WHERE (\"status\" <> $1)")
   assert_eq(q.params, [@ast.Value::String("deleted")])
 }
 
+///|
 test "select with lt operator" {
   let q = @builder.select()
     .all()
     .from("products")
     .where_(@builder.col("price").lt(@builder.val_int(100)))
     .build()
-  assert_eq(
-    q.sql,
-    "SELECT * FROM \"products\" WHERE (\"price\" < $1)",
-  )
+  assert_eq(q.sql, "SELECT * FROM \"products\" WHERE (\"price\" < $1)")
   assert_eq(q.params, [@ast.Value::Int(100)])
 }
 
+///|
 test "select with gt operator" {
   let q = @builder.select()
     .columns(["id", "name"])
@@ -243,29 +264,25 @@ test "select with gt operator" {
   assert_eq(q.params, [@ast.Value::Int(18)])
 }
 
+///|
 test "select with gte operator" {
   let q = @builder.select()
     .all()
     .from("products")
     .where_(@builder.col("stock").gte(@builder.val_int(0)))
     .build()
-  assert_eq(
-    q.sql,
-    "SELECT * FROM \"products\" WHERE (\"stock\" >= $1)",
-  )
+  assert_eq(q.sql, "SELECT * FROM \"products\" WHERE (\"stock\" >= $1)")
   assert_eq(q.params, [@ast.Value::Int(0)])
 }
 
+///|
 test "select with lte operator" {
   let q = @builder.select()
     .all()
     .from("products")
     .where_(@builder.col("price").lte(@builder.val_int(1000)))
     .build()
-  assert_eq(
-    q.sql,
-    "SELECT * FROM \"products\" WHERE (\"price\" <= $1)",
-  )
+  assert_eq(q.sql, "SELECT * FROM \"products\" WHERE (\"price\" <= $1)")
   assert_eq(q.params, [@ast.Value::Int(1000)])
 }
 
@@ -273,6 +290,7 @@ test "select with lte operator" {
 // SELECT: IS NULL / IS NOT NULL
 // ========================================================
 
+///|
 test "select with is null" {
   let q = @builder.select()
     .columns(["character"])
@@ -286,19 +304,18 @@ test "select with is null" {
   assert_eq(q.params, [])
 }
 
+///|
 test "select with is not null" {
   let q = @builder.select()
     .all()
     .from("users")
     .where_(@builder.col("email").is_not_null())
     .build()
-  assert_eq(
-    q.sql,
-    "SELECT * FROM \"users\" WHERE \"email\" IS NOT NULL",
-  )
+  assert_eq(q.sql, "SELECT * FROM \"users\" WHERE \"email\" IS NOT NULL")
   assert_eq(q.params, [])
 }
 
+///|
 test "select with is null and is not null combined" {
   let q = @builder.select()
     .columns(["character"])
@@ -313,11 +330,14 @@ test "select with is null and is not null combined" {
   assert_eq(q.params, [])
 }
 
+///|
 test "select with is null or is not null" {
   let q = @builder.select()
     .column("id")
     .from("glyph")
-    .where_(@builder.col("aspect").is_null().or_(@builder.col("aspect").is_not_null()))
+    .where_(
+      @builder.col("aspect").is_null().or_(@builder.col("aspect").is_not_null()),
+    )
     .build()
   assert_eq(
     q.sql,
@@ -330,69 +350,76 @@ test "select with is null or is not null" {
 // SELECT: LIKE
 // ========================================================
 
+///|
 test "select with like" {
   let q = @builder.select()
     .all()
     .from("users")
     .where_(@builder.col("name").like("%Alice%"))
     .build()
-  assert_eq(
-    q.sql,
-    "SELECT * FROM \"users\" WHERE (\"name\" LIKE $1)",
-  )
+  assert_eq(q.sql, "SELECT * FROM \"users\" WHERE (\"name\" LIKE $1)")
   assert_eq(q.params, [@ast.Value::String("%Alice%")])
 }
 
+///|
 test "select with multiple like (OR)" {
   let q = @builder.select()
     .columns(["character"])
     .from("character")
     .where_(
       @builder.col("character")
-        .like("A%")
-        .or_(@builder.col("character").like("%B"))
-        .or_(@builder.col("character").like("%C%")),
+      .like("A%")
+      .or_(@builder.col("character").like("%B"))
+      .or_(@builder.col("character").like("%C%")),
     )
     .build()
   assert_eq(
     q.sql,
     "SELECT \"character\" FROM \"character\" WHERE (((\"character\" LIKE $1) OR (\"character\" LIKE $2)) OR (\"character\" LIKE $3))",
   )
-  assert_eq(
-    q.params,
-    [
-      @ast.Value::String("A%"),
-      @ast.Value::String("%B"),
-      @ast.Value::String("%C%"),
-    ],
-  )
+  assert_eq(q.params, [
+    @ast.Value::String("A%"),
+    @ast.Value::String("%B"),
+    @ast.Value::String("%C%"),
+  ])
 }
 
 // ========================================================
 // SELECT: IN / NOT IN
 // ========================================================
 
+///|
 test "select with in list" {
   let q = @builder.select()
     .all()
     .from("users")
-    .where_(@builder.col("id").in_list([@builder.val_int(1), @builder.val_int(2), @builder.val_int(3)]))
+    .where_(
+      @builder.col("id").in_list([
+        @builder.val_int(1),
+        @builder.val_int(2),
+        @builder.val_int(3),
+      ]),
+    )
     .build()
-  assert_eq(
-    q.sql,
-    "SELECT * FROM \"users\" WHERE \"id\" IN ($1, $2, $3)",
-  )
-  assert_eq(
-    q.params,
-    [@ast.Value::Int(1), @ast.Value::Int(2), @ast.Value::Int(3)],
-  )
+  assert_eq(q.sql, "SELECT * FROM \"users\" WHERE \"id\" IN ($1, $2, $3)")
+  assert_eq(q.params, [
+    @ast.Value::Int(1),
+    @ast.Value::Int(2),
+    @ast.Value::Int(3),
+  ])
 }
 
+///|
 test "select with table-qualified in list" {
   let q = @builder.select()
     .column("image")
     .from("glyph")
-    .where_(@builder.table_col("glyph", "aspect").in_list([@builder.val_int(3), @builder.val_int(4)]))
+    .where_(
+      @builder.table_col("glyph", "aspect").in_list([
+        @builder.val_int(3),
+        @builder.val_int(4),
+      ]),
+    )
     .build()
   assert_eq(
     q.sql,
@@ -401,53 +428,66 @@ test "select with table-qualified in list" {
   assert_eq(q.params, [@ast.Value::Int(3), @ast.Value::Int(4)])
 }
 
+///|
 test "select with not in list" {
   let q = @builder.select()
     .all()
     .from("users")
-    .where_(@builder.col("status").not_in_list([@builder.val_str("banned"), @builder.val_str("deleted")]))
+    .where_(
+      @builder.col("status").not_in_list([
+        @builder.val_str("banned"),
+        @builder.val_str("deleted"),
+      ]),
+    )
     .build()
-  assert_eq(
-    q.sql,
-    "SELECT * FROM \"users\" WHERE \"status\" NOT IN ($1, $2)",
-  )
-  assert_eq(
-    q.params,
-    [@ast.Value::String("banned"), @ast.Value::String("deleted")],
-  )
+  assert_eq(q.sql, "SELECT * FROM \"users\" WHERE \"status\" NOT IN ($1, $2)")
+  assert_eq(q.params, [
+    @ast.Value::String("banned"),
+    @ast.Value::String("deleted"),
+  ])
 }
 
+///|
 test "select with in list and like combined" {
   let q = @builder.select()
     .all()
     .from("users")
-    .where_(@builder.col("id").in_list([@builder.val_int(1), @builder.val_int(2), @builder.val_int(3)]))
+    .where_(
+      @builder.col("id").in_list([
+        @builder.val_int(1),
+        @builder.val_int(2),
+        @builder.val_int(3),
+      ]),
+    )
     .where_(@builder.col("name").like("A%"))
     .build()
   assert_eq(
     q.sql,
     "SELECT * FROM \"users\" WHERE (\"id\" IN ($1, $2, $3) AND (\"name\" LIKE $4))",
   )
-  assert_eq(
-    q.params,
-    [
-      @ast.Value::Int(1),
-      @ast.Value::Int(2),
-      @ast.Value::Int(3),
-      @ast.Value::String("A%"),
-    ],
-  )
+  assert_eq(q.params, [
+    @ast.Value::Int(1),
+    @ast.Value::Int(2),
+    @ast.Value::Int(3),
+    @ast.Value::String("A%"),
+  ])
 }
 
 // ========================================================
 // SELECT: BETWEEN / NOT BETWEEN
 // ========================================================
 
+///|
 test "select with between" {
   let q = @builder.select()
     .all()
     .from("products")
-    .where_(@builder.col("price").between(@builder.val_int(100), @builder.val_int(500)))
+    .where_(
+      @builder.col("price").between(
+        @builder.val_int(100),
+        @builder.val_int(500),
+      ),
+    )
     .build()
   assert_eq(
     q.sql,
@@ -456,11 +496,17 @@ test "select with between" {
   assert_eq(q.params, [@ast.Value::Int(100), @ast.Value::Int(500)])
 }
 
+///|
 test "select with between table-qualified" {
   let q = @builder.select()
     .column("image")
     .from("glyph")
-    .where_(@builder.table_col("glyph", "aspect").between(@builder.val_int(3), @builder.val_int(5)))
+    .where_(
+      @builder.table_col("glyph", "aspect").between(
+        @builder.val_int(3),
+        @builder.val_int(5),
+      ),
+    )
     .build()
   assert_eq(
     q.sql,
@@ -469,11 +515,17 @@ test "select with between table-qualified" {
   assert_eq(q.params, [@ast.Value::Int(3), @ast.Value::Int(5)])
 }
 
+///|
 test "select with not between" {
   let q = @builder.select()
     .all()
     .from("products")
-    .where_(@builder.col("price").not_between(@builder.val_int(800), @builder.val_int(1000)))
+    .where_(
+      @builder.col("price").not_between(
+        @builder.val_int(800),
+        @builder.val_int(1000),
+      ),
+    )
     .build()
   assert_eq(
     q.sql,
@@ -482,32 +534,38 @@ test "select with not between" {
   assert_eq(q.params, [@ast.Value::Int(800), @ast.Value::Int(1000)])
 }
 
+///|
 test "select with between and not between combined" {
   let q = @builder.select()
     .columns(["aspect"])
     .from("glyph")
-    .where_(@builder.col("aspect").between(@builder.val_int(3), @builder.val_int(5)))
-    .where_(@builder.col("aspect").not_between(@builder.val_int(8), @builder.val_int(10)))
+    .where_(
+      @builder.col("aspect").between(@builder.val_int(3), @builder.val_int(5)),
+    )
+    .where_(
+      @builder.col("aspect").not_between(
+        @builder.val_int(8),
+        @builder.val_int(10),
+      ),
+    )
     .build()
   assert_eq(
     q.sql,
     "SELECT \"aspect\" FROM \"glyph\" WHERE (\"aspect\" BETWEEN $1 AND $2 AND \"aspect\" NOT BETWEEN $3 AND $4)",
   )
-  assert_eq(
-    q.params,
-    [
-      @ast.Value::Int(3),
-      @ast.Value::Int(5),
-      @ast.Value::Int(8),
-      @ast.Value::Int(10),
-    ],
-  )
+  assert_eq(q.params, [
+    @ast.Value::Int(3),
+    @ast.Value::Int(5),
+    @ast.Value::Int(8),
+    @ast.Value::Int(10),
+  ])
 }
 
 // ========================================================
 // SELECT: Arithmetic expressions
 // ========================================================
 
+///|
 test "select with arithmetic multiply" {
   let q = @builder.select()
     .expr_as(@builder.col("price").mul(@builder.col("quantity")), "total")
@@ -520,12 +578,15 @@ test "select with arithmetic multiply" {
   assert_eq(q.params, [])
 }
 
+///|
 test "select with arithmetic in where" {
   let q = @builder.select()
     .column("character")
     .from("character")
     .where_(
-      @builder.col("size_w").mul(@builder.val_int(2)).eq(@builder.col("size_h").div(@builder.val_int(2))),
+      @builder.col("size_w")
+      .mul(@builder.val_int(2))
+      .eq(@builder.col("size_h").div(@builder.val_int(2))),
     )
     .build()
   assert_eq(
@@ -535,6 +596,7 @@ test "select with arithmetic in where" {
   assert_eq(q.params, [@ast.Value::Int(2), @ast.Value::Int(2)])
 }
 
+///|
 test "select with complex arithmetic" {
   // (size_w * 2) + (size_h / 3) = 4
   let q = @builder.select()
@@ -542,38 +604,38 @@ test "select with complex arithmetic" {
     .from("character")
     .where_(
       @builder.col("size_w")
-        .mul(@builder.val_int(2))
-        .add(@builder.col("size_h").div(@builder.val_int(3)))
-        .eq(@builder.val_int(4)),
+      .mul(@builder.val_int(2))
+      .add(@builder.col("size_h").div(@builder.val_int(3)))
+      .eq(@builder.val_int(4)),
     )
     .build()
   assert_eq(
     q.sql,
     "SELECT \"character\", \"size_w\", \"size_h\" FROM \"character\" WHERE (((\"size_w\" * $1) + (\"size_h\" / $2)) = $3)",
   )
-  assert_eq(
-    q.params,
-    [@ast.Value::Int(2), @ast.Value::Int(3), @ast.Value::Int(4)],
-  )
+  assert_eq(q.params, [
+    @ast.Value::Int(2),
+    @ast.Value::Int(3),
+    @ast.Value::Int(4),
+  ])
 }
 
 // ========================================================
 // SELECT: NOT expression
 // ========================================================
 
+///|
 test "select with not expression" {
   let q = @builder.select()
     .all()
     .from("users")
     .where_(@builder.col("active").eq(@builder.val_bool(true)).not_())
     .build()
-  assert_eq(
-    q.sql,
-    "SELECT * FROM \"users\" WHERE (NOT (\"active\" = $1))",
-  )
+  assert_eq(q.sql, "SELECT * FROM \"users\" WHERE (NOT (\"active\" = $1))")
   assert_eq(q.params, [@ast.Value::Bool(true)])
 }
 
+///|
 test "select with negation" {
   let q = @builder.select()
     .expr(@builder.col("balance").neg())
@@ -587,12 +649,17 @@ test "select with negation" {
 // SELECT: Functions (COUNT, MAX, COALESCE, SUM, etc.)
 // ========================================================
 
+///|
 test "select with count star" {
-  let q = @builder.select().expr(@builder.func("COUNT", [@builder.asterisk()])).from("users").build()
+  let q = @builder.select()
+    .expr(@builder.func("COUNT", [@builder.asterisk()]))
+    .from("users")
+    .build()
   assert_eq(q.sql, "SELECT COUNT(*) FROM \"users\"")
   assert_eq(q.params, [])
 }
 
+///|
 test "select with count star alias" {
   let q = @builder.select()
     .expr_as(@builder.func("COUNT", [@builder.asterisk()]), "total")
@@ -602,6 +669,7 @@ test "select with count star alias" {
   assert_eq(q.params, [])
 }
 
+///|
 test "select with max function" {
   let q = @builder.select()
     .column("aspect")
@@ -617,29 +685,33 @@ test "select with max function" {
   assert_eq(q.params, [@ast.Value::Int(2)])
 }
 
+///|
 test "select with coalesce" {
   let q = @builder.select()
     .expr(
-      @builder.func(
-        "COALESCE",
-        [@builder.col("nickname"), @builder.col("name"), @builder.val_str("Anonymous")],
-      ),
+      @builder.func("COALESCE", [
+        @builder.col("nickname"),
+        @builder.col("name"),
+        @builder.val_str("Anonymous"),
+      ]),
     )
     .from("users")
     .build()
-  assert_eq(
-    q.sql,
-    "SELECT COALESCE(\"nickname\", \"name\", $1) FROM \"users\"",
-  )
+  assert_eq(q.sql, "SELECT COALESCE(\"nickname\", \"name\", $1) FROM \"users\"")
   assert_eq(q.params, [@ast.Value::String("Anonymous")])
 }
 
+///|
 test "select with coalesce in where" {
   // COALESCE("aspect", 0) > 2
   let q = @builder.select()
     .columns(["aspect"])
     .from("glyph")
-    .where_(@builder.func("COALESCE", [@builder.col("aspect"), @builder.val_int(0)]).gt(@builder.val_int(2)))
+    .where_(
+      @builder.func("COALESCE", [@builder.col("aspect"), @builder.val_int(0)]).gt(
+        @builder.val_int(2),
+      ),
+    )
     .build()
   assert_eq(
     q.sql,
@@ -648,6 +720,7 @@ test "select with coalesce in where" {
   assert_eq(q.params, [@ast.Value::Int(0), @ast.Value::Int(2)])
 }
 
+///|
 test "select with sum function" {
   let q = @builder.select()
     .expr_as(@builder.func("SUM", [@builder.col("amount")]), "total_amount")
@@ -660,27 +733,23 @@ test "select with sum function" {
   assert_eq(q.params, [])
 }
 
+///|
 test "select with avg function" {
   let q = @builder.select()
     .expr_as(@builder.func("AVG", [@builder.col("price")]), "avg_price")
     .from("products")
     .build()
-  assert_eq(
-    q.sql,
-    "SELECT AVG(\"price\") AS \"avg_price\" FROM \"products\"",
-  )
+  assert_eq(q.sql, "SELECT AVG(\"price\") AS \"avg_price\" FROM \"products\"")
   assert_eq(q.params, [])
 }
 
+///|
 test "select with min function" {
   let q = @builder.select()
     .expr_as(@builder.func("MIN", [@builder.col("created_at")]), "earliest")
     .from("events")
     .build()
-  assert_eq(
-    q.sql,
-    "SELECT MIN(\"created_at\") AS \"earliest\" FROM \"events\"",
-  )
+  assert_eq(q.sql, "SELECT MIN(\"created_at\") AS \"earliest\" FROM \"events\"")
   assert_eq(q.params, [])
 }
 
@@ -688,15 +757,13 @@ test "select with min function" {
 // SELECT: Expression alias
 // ========================================================
 
+///|
 test "select with expression alias" {
   let q = @builder.select()
     .expr_as(@builder.col("character"), "C")
     .from("character")
     .build()
-  assert_eq(
-    q.sql,
-    "SELECT \"character\" AS \"C\" FROM \"character\"",
-  )
+  assert_eq(q.sql, "SELECT \"character\" AS \"C\" FROM \"character\"")
   assert_eq(q.params, [])
 }
 
@@ -704,12 +771,14 @@ test "select with expression alias" {
 // SELECT: Table references
 // ========================================================
 
+///|
 test "select with table all columns" {
   let q = @builder.select().table_all_columns("users").from("users").build()
   assert_eq(q.sql, "SELECT \"users\".* FROM \"users\"")
   assert_eq(q.params, [])
 }
 
+///|
 test "select with table all columns and named column" {
   let q = @builder.select()
     .table_all_columns("character")
@@ -717,7 +786,9 @@ test "select with table all columns and named column" {
     .from("character")
     .join(
       "font",
-      @builder.table_col("character", "font_id").eq(@builder.table_col("font", "id")),
+      @builder.table_col("character", "font_id").eq(
+        @builder.table_col("font", "id"),
+      ),
     )
     .build()
   assert_eq(
@@ -727,6 +798,7 @@ test "select with table all columns and named column" {
   assert_eq(q.params, [])
 }
 
+///|
 test "select with from_as alias" {
   let q = @builder.select()
     .columns(["id", "name"])
@@ -736,22 +808,21 @@ test "select with from_as alias" {
   assert_eq(q.params, [])
 }
 
+///|
 test "select with schema-qualified table" {
   let q = @builder.select().all().from_schema("public", "users").build()
   assert_eq(q.sql, "SELECT * FROM \"public\".\"users\"")
   assert_eq(q.params, [])
 }
 
+///|
 test "select with table qualified columns" {
   let q = @builder.select()
     .all()
     .from("users")
     .where_(@builder.table_col("users", "id").eq(@builder.val_int(1)))
     .build()
-  assert_eq(
-    q.sql,
-    "SELECT * FROM \"users\" WHERE (\"users\".\"id\" = $1)",
-  )
+  assert_eq(q.sql, "SELECT * FROM \"users\" WHERE (\"users\".\"id\" = $1)")
   assert_eq(q.params, [@ast.Value::Int(1)])
 }
 
@@ -759,13 +830,16 @@ test "select with table qualified columns" {
 // SELECT: JOINs
 // ========================================================
 
+///|
 test "select with inner join" {
   let q = @builder.select()
     .columns(["name", "total"])
     .from("users")
     .join(
       "orders",
-      @builder.table_col("users", "id").eq(@builder.table_col("orders", "user_id")),
+      @builder.table_col("users", "id").eq(
+        @builder.table_col("orders", "user_id"),
+      ),
     )
     .build()
   assert_eq(
@@ -775,13 +849,16 @@ test "select with inner join" {
   assert_eq(q.params, [])
 }
 
+///|
 test "select with left join" {
   let q = @builder.select()
     .columns(["character"])
     .from("character")
     .left_join(
       "font",
-      @builder.table_col("character", "font_id").eq(@builder.table_col("font", "id")),
+      @builder.table_col("character", "font_id").eq(
+        @builder.table_col("font", "id"),
+      ),
     )
     .build()
   assert_eq(
@@ -791,13 +868,16 @@ test "select with left join" {
   assert_eq(q.params, [])
 }
 
+///|
 test "select with right join" {
   let q = @builder.select()
     .columns(["name"])
     .from("users")
     .right_join(
       "orders",
-      @builder.table_col("users", "id").eq(@builder.table_col("orders", "user_id")),
+      @builder.table_col("users", "id").eq(
+        @builder.table_col("orders", "user_id"),
+      ),
     )
     .build()
   assert_eq(
@@ -807,13 +887,16 @@ test "select with right join" {
   assert_eq(q.params, [])
 }
 
+///|
 test "select with full join" {
   let q = @builder.select()
     .all()
     .from("left_table")
     .full_join(
       "right_table",
-      @builder.table_col("left_table", "id").eq(@builder.table_col("right_table", "id")),
+      @builder.table_col("left_table", "id").eq(
+        @builder.table_col("right_table", "id"),
+      ),
     )
     .build()
   assert_eq(
@@ -823,26 +906,29 @@ test "select with full join" {
   assert_eq(q.params, [])
 }
 
+///|
 test "select with cross join" {
   let q = @builder.select().all().from("colors").cross_join("sizes").build()
-  assert_eq(
-    q.sql,
-    "SELECT * FROM \"colors\" CROSS JOIN \"sizes\"",
-  )
+  assert_eq(q.sql, "SELECT * FROM \"colors\" CROSS JOIN \"sizes\"")
   assert_eq(q.params, [])
 }
 
+///|
 test "select with multiple joins" {
   let q = @builder.select()
     .all()
     .from("orders")
     .join(
       "users",
-      @builder.table_col("orders", "user_id").eq(@builder.table_col("users", "id")),
+      @builder.table_col("orders", "user_id").eq(
+        @builder.table_col("users", "id"),
+      ),
     )
     .left_join(
       "products",
-      @builder.table_col("orders", "product_id").eq(@builder.table_col("products", "id")),
+      @builder.table_col("orders", "product_id").eq(
+        @builder.table_col("products", "id"),
+      ),
     )
     .build()
   assert_eq(
@@ -852,17 +938,22 @@ test "select with multiple joins" {
   assert_eq(q.params, [])
 }
 
+///|
 test "select with left join then inner join" {
   let q = @builder.select()
     .columns(["character"])
     .from("character")
     .left_join(
       "font",
-      @builder.table_col("character", "font_id").eq(@builder.table_col("font", "id")),
+      @builder.table_col("character", "font_id").eq(
+        @builder.table_col("font", "id"),
+      ),
     )
     .join(
       "glyph",
-      @builder.table_col("character", "character").eq(@builder.table_col("glyph", "image")),
+      @builder.table_col("character", "character").eq(
+        @builder.table_col("glyph", "image"),
+      ),
     )
     .build()
   assert_eq(
@@ -872,6 +963,7 @@ test "select with left join then inner join" {
   assert_eq(q.params, [])
 }
 
+///|
 test "select with join compound on condition" {
   let q = @builder.select()
     .columns(["character"])
@@ -879,8 +971,12 @@ test "select with join compound on condition" {
     .left_join(
       "font",
       @builder.table_col("character", "font_id")
-        .eq(@builder.table_col("font", "id"))
-        .and_(@builder.table_col("character", "font_id").eq(@builder.table_col("font", "id"))),
+      .eq(@builder.table_col("font", "id"))
+      .and_(
+        @builder.table_col("character", "font_id").eq(
+          @builder.table_col("font", "id"),
+        ),
+      ),
     )
     .build()
   assert_eq(
@@ -890,13 +986,16 @@ test "select with join compound on condition" {
   assert_eq(q.params, [])
 }
 
+///|
 test "select with join and where" {
   let q = @builder.select()
     .columns(["name", "total"])
     .from("users")
     .join(
       "orders",
-      @builder.table_col("users", "id").eq(@builder.table_col("orders", "user_id")),
+      @builder.table_col("users", "id").eq(
+        @builder.table_col("orders", "user_id"),
+      ),
     )
     .where_(@builder.col("total").gt(@builder.val_int(100)))
     .build()
@@ -911,13 +1010,16 @@ test "select with join and where" {
 // SELECT: GROUP BY + HAVING
 // ========================================================
 
+///|
 test "select with group by and having" {
   let q = @builder.select()
     .column("department")
     .expr(@builder.func("COUNT", [@builder.asterisk()]))
     .from("employees")
     .group_by("department")
-    .having(@builder.func("COUNT", [@builder.asterisk()]).gt(@builder.val_int(5)))
+    .having(
+      @builder.func("COUNT", [@builder.asterisk()]).gt(@builder.val_int(5)),
+    )
     .build()
   assert_eq(
     q.sql,
@@ -926,6 +1028,7 @@ test "select with group by and having" {
   assert_eq(q.params, [@ast.Value::Int(5)])
 }
 
+///|
 test "select with group by table-qualified" {
   let q = @builder.select()
     .columns(["id", "aspect"])
@@ -946,6 +1049,7 @@ test "select with group by table-qualified" {
 // SELECT: ORDER BY
 // ========================================================
 
+///|
 test "select with order by asc" {
   let q = @builder.select()
     .all()
@@ -961,6 +1065,7 @@ test "select with order by asc" {
   assert_eq(q.params, [@ast.Value::Int(10), @ast.Value::Int(20)])
 }
 
+///|
 test "select with multiple order by" {
   let q = @builder.select()
     .all()
@@ -975,11 +1080,16 @@ test "select with multiple order by" {
   assert_eq(q.params, [])
 }
 
+///|
 test "select with order by table-qualified" {
   let q = @builder.select()
     .columns(["aspect"])
     .from("glyph")
-    .where_(@builder.func("COALESCE", [@builder.col("aspect"), @builder.val_int(0)]).gt(@builder.val_int(2)))
+    .where_(
+      @builder.func("COALESCE", [@builder.col("aspect"), @builder.val_int(0)]).gt(
+        @builder.val_int(2),
+      ),
+    )
     .order_by("image", @ast.Desc)
     .order_by_table("glyph", "aspect", @ast.Asc)
     .build()
@@ -994,58 +1104,51 @@ test "select with order by table-qualified" {
 // SELECT: Value types
 // ========================================================
 
+///|
 test "select with null parameter" {
   let q = @builder.select()
     .all()
     .from("users")
     .where_(@builder.col("name").eq(@builder.val_null()))
     .build()
-  assert_eq(
-    q.sql,
-    "SELECT * FROM \"users\" WHERE (\"name\" = $1)",
-  )
+  assert_eq(q.sql, "SELECT * FROM \"users\" WHERE (\"name\" = $1)")
   assert_eq(q.params, [@ast.Value::Null])
 }
 
+///|
 test "select with double value" {
   let q = @builder.select()
     .all()
     .from("products")
     .where_(@builder.col("rating").gte(@builder.val_double(4.5)))
     .build()
-  assert_eq(
-    q.sql,
-    "SELECT * FROM \"products\" WHERE (\"rating\" >= $1)",
-  )
+  assert_eq(q.sql, "SELECT * FROM \"products\" WHERE (\"rating\" >= $1)")
   assert_eq(q.params, [@ast.Value::Double(4.5)])
 }
 
+///|
 test "select with int64 value" {
   let q = @builder.select()
     .all()
     .from("events")
     .where_(@builder.col("timestamp").gt(@builder.val_int64(1700000000L)))
     .build()
-  assert_eq(
-    q.sql,
-    "SELECT * FROM \"events\" WHERE (\"timestamp\" > $1)",
-  )
+  assert_eq(q.sql, "SELECT * FROM \"events\" WHERE (\"timestamp\" > $1)")
   assert_eq(q.params, [@ast.Value::Int64(1700000000L)])
 }
 
+///|
 test "select with bool value" {
   let q = @builder.select()
     .all()
     .from("users")
     .where_(@builder.col("active").eq(@builder.val_bool(true)))
     .build()
-  assert_eq(
-    q.sql,
-    "SELECT * FROM \"users\" WHERE (\"active\" = $1)",
-  )
+  assert_eq(q.sql, "SELECT * FROM \"users\" WHERE (\"active\" = $1)")
   assert_eq(q.params, [@ast.Value::Bool(true)])
 }
 
+///|
 test "select with string value" {
   let q = @builder.select()
     .columns(["character"])
@@ -1063,6 +1166,7 @@ test "select with string value" {
 // SELECT: Parameter numbering
 // ========================================================
 
+///|
 test "select param numbering across clauses" {
   let q = @builder.select()
     .all()
@@ -1076,17 +1180,15 @@ test "select param numbering across clauses" {
     q.sql,
     "SELECT * FROM \"users\" WHERE ((\"age\" > $1) AND (\"name\" LIKE $2)) LIMIT $3 OFFSET $4",
   )
-  assert_eq(
-    q.params,
-    [
-      @ast.Value::Int(18),
-      @ast.Value::String("%test%"),
-      @ast.Value::Int(10),
-      @ast.Value::Int(0),
-    ],
-  )
+  assert_eq(q.params, [
+    @ast.Value::Int(18),
+    @ast.Value::String("%test%"),
+    @ast.Value::Int(10),
+    @ast.Value::Int(0),
+  ])
 }
 
+///|
 test "select same values get separate params" {
   let q = @builder.select()
     .all()
@@ -1105,6 +1207,7 @@ test "select same values get separate params" {
 // INSERT: Basic
 // ========================================================
 
+///|
 test "insert basic" {
   let q = @builder.insert_into("users")
     .columns(["name", "email"])
@@ -1114,15 +1217,13 @@ test "insert basic" {
     q.sql,
     "INSERT INTO \"users\" (\"name\", \"email\") VALUES ($1, $2)",
   )
-  assert_eq(
-    q.params,
-    [
-      @ast.Value::String("Alice"),
-      @ast.Value::String("alice@example.com"),
-    ],
-  )
+  assert_eq(q.params, [
+    @ast.Value::String("Alice"),
+    @ast.Value::String("alice@example.com"),
+  ])
 }
 
+///|
 test "insert with double value" {
   let q = @builder.insert_into("glyph")
     .columns(["image", "aspect"])
@@ -1132,12 +1233,13 @@ test "insert with double value" {
     q.sql,
     "INSERT INTO \"glyph\" (\"image\", \"aspect\") VALUES ($1, $2)",
   )
-  assert_eq(
-    q.params,
-    [@ast.Value::String("04108048"), @ast.Value::Double(3.1415)],
-  )
+  assert_eq(q.params, [
+    @ast.Value::String("04108048"),
+    @ast.Value::Double(3.1415),
+  ])
 }
 
+///|
 test "insert multi-row" {
   let q = @builder.insert_into("users")
     .columns(["name", "email"])
@@ -1148,17 +1250,15 @@ test "insert multi-row" {
     q.sql,
     "INSERT INTO \"users\" (\"name\", \"email\") VALUES ($1, $2), ($3, $4)",
   )
-  assert_eq(
-    q.params,
-    [
-      @ast.Value::String("Alice"),
-      @ast.Value::String("alice@example.com"),
-      @ast.Value::String("Bob"),
-      @ast.Value::String("bob@example.com"),
-    ],
-  )
+  assert_eq(q.params, [
+    @ast.Value::String("Alice"),
+    @ast.Value::String("alice@example.com"),
+    @ast.Value::String("Bob"),
+    @ast.Value::String("bob@example.com"),
+  ])
 }
 
+///|
 test "insert multi-row with null" {
   let q = @builder.insert_into("glyph")
     .columns(["image", "aspect"])
@@ -1169,21 +1269,19 @@ test "insert multi-row with null" {
     q.sql,
     "INSERT INTO \"glyph\" (\"image\", \"aspect\") VALUES ($1, $2), ($3, $4)",
   )
-  assert_eq(
-    q.params,
-    [
-      @ast.Value::String("image1"),
-      @ast.Value::Double(3.1415),
-      @ast.Value::Null,
-      @ast.Value::Double(2.1345),
-    ],
-  )
+  assert_eq(q.params, [
+    @ast.Value::String("image1"),
+    @ast.Value::Double(3.1415),
+    @ast.Value::Null,
+    @ast.Value::Double(2.1345),
+  ])
 }
 
 // ========================================================
 // INSERT: RETURNING
 // ========================================================
 
+///|
 test "insert with returning" {
   let q = @builder.insert_into("users")
     .columns(["name", "email"])
@@ -1194,12 +1292,13 @@ test "insert with returning" {
     q.sql,
     "INSERT INTO \"users\" (\"name\", \"email\") VALUES ($1, $2) RETURNING \"id\"",
   )
-  assert_eq(
-    q.params,
-    [@ast.Value::String("Bob"), @ast.Value::String("bob@example.com")],
-  )
+  assert_eq(q.params, [
+    @ast.Value::String("Bob"),
+    @ast.Value::String("bob@example.com"),
+  ])
 }
 
+///|
 test "insert with multiple returning" {
   let q = @builder.insert_into("users")
     .columns(["name"])
@@ -1217,6 +1316,7 @@ test "insert with multiple returning" {
 // UPDATE: Basic
 // ========================================================
 
+///|
 test "update basic" {
   let q = @builder.update("users")
     .set("name", @builder.val_str("Bob"))
@@ -1227,22 +1327,23 @@ test "update basic" {
     q.sql,
     "UPDATE \"users\" SET \"name\" = $1, \"active\" = $2 WHERE (\"id\" = $3)",
   )
-  assert_eq(
-    q.params,
-    [
-      @ast.Value::String("Bob"),
-      @ast.Value::Bool(true),
-      @ast.Value::Int(1),
-    ],
-  )
+  assert_eq(q.params, [
+    @ast.Value::String("Bob"),
+    @ast.Value::Bool(true),
+    @ast.Value::Int(1),
+  ])
 }
 
+///|
 test "update without where" {
-  let q = @builder.update("settings").set("value", @builder.val_str("default")).build()
+  let q = @builder.update("settings")
+    .set("value", @builder.val_str("default"))
+    .build()
   assert_eq(q.sql, "UPDATE \"settings\" SET \"value\" = $1")
   assert_eq(q.params, [@ast.Value::String("default")])
 }
 
+///|
 test "update with multiple set and where" {
   let q = @builder.update("products")
     .set("name", @builder.val_str("Widget"))
@@ -1255,18 +1356,16 @@ test "update with multiple set and where" {
     q.sql,
     "UPDATE \"products\" SET \"name\" = $1, \"price\" = $2, \"active\" = $3 WHERE ((\"id\" = $4) AND (\"version\" = $5))",
   )
-  assert_eq(
-    q.params,
-    [
-      @ast.Value::String("Widget"),
-      @ast.Value::Int(999),
-      @ast.Value::Bool(false),
-      @ast.Value::Int(42),
-      @ast.Value::Int(3),
-    ],
-  )
+  assert_eq(q.params, [
+    @ast.Value::String("Widget"),
+    @ast.Value::Int(999),
+    @ast.Value::Bool(false),
+    @ast.Value::Int(42),
+    @ast.Value::Int(3),
+  ])
 }
 
+///|
 test "update set column to expression" {
   // SET "aspect" = "aspect" + 1
   let q = @builder.update("glyph")
@@ -1284,6 +1383,7 @@ test "update set column to expression" {
 // UPDATE: RETURNING
 // ========================================================
 
+///|
 test "update with returning" {
   let q = @builder.update("users")
     .set("name", @builder.val_str("Updated"))
@@ -1294,28 +1394,30 @@ test "update with returning" {
     q.sql,
     "UPDATE \"users\" SET \"name\" = $1 WHERE (\"id\" = $2) RETURNING \"id\", \"name\"",
   )
-  assert_eq(
-    q.params,
-    [@ast.Value::String("Updated"), @ast.Value::Int(1)],
-  )
+  assert_eq(q.params, [@ast.Value::String("Updated"), @ast.Value::Int(1)])
 }
 
 // ========================================================
 // DELETE: Basic
 // ========================================================
 
+///|
 test "delete basic" {
-  let q = @builder.delete_from("users").where_(@builder.col("id").eq(@builder.val_int(42))).build()
+  let q = @builder.delete_from("users")
+    .where_(@builder.col("id").eq(@builder.val_int(42)))
+    .build()
   assert_eq(q.sql, "DELETE FROM \"users\" WHERE (\"id\" = $1)")
   assert_eq(q.params, [@ast.Value::Int(42)])
 }
 
+///|
 test "delete without where" {
   let q = @builder.delete_from("temp_data").build()
   assert_eq(q.sql, "DELETE FROM \"temp_data\"")
   assert_eq(q.params, [])
 }
 
+///|
 test "delete with multiple where" {
   let q = @builder.delete_from("logs")
     .where_(@builder.col("level").eq(@builder.val_str("debug")))
@@ -1325,16 +1427,14 @@ test "delete with multiple where" {
     q.sql,
     "DELETE FROM \"logs\" WHERE ((\"level\" = $1) AND (\"age_days\" > $2))",
   )
-  assert_eq(
-    q.params,
-    [@ast.Value::String("debug"), @ast.Value::Int(30)],
-  )
+  assert_eq(q.params, [@ast.Value::String("debug"), @ast.Value::Int(30)])
 }
 
 // ========================================================
 // DELETE: RETURNING
 // ========================================================
 
+///|
 test "delete with returning" {
   let q = @builder.delete_from("users")
     .where_(@builder.col("active").eq(@builder.val_bool(false)))
@@ -1347,6 +1447,7 @@ test "delete with returning" {
   assert_eq(q.params, [@ast.Value::Bool(false)])
 }
 
+///|
 test "delete with returning multiple columns" {
   let q = @builder.delete_from("glyph")
     .where_(@builder.col("id").eq(@builder.val_int(1)))
@@ -1363,18 +1464,23 @@ test "delete with returning multiple columns" {
 // Boundary/edge cases
 // ========================================================
 
+///|
 test "select with empty columns defaults to star" {
   let q = @builder.select().from("users").build()
   assert_eq(q.sql, "SELECT * FROM \"users\"")
   assert_eq(q.params, [])
 }
 
+///|
 test "select without from clause" {
-  let q = @builder.select().expr(@builder.func("COUNT", [@builder.asterisk()])).build()
+  let q = @builder.select()
+    .expr(@builder.func("COUNT", [@builder.asterisk()]))
+    .build()
   assert_eq(q.sql, "SELECT COUNT(*)")
   assert_eq(q.params, [])
 }
 
+///|
 test "select with in_list empty array renders FALSE" {
   let q = @builder.select()
     .all()
@@ -1385,84 +1491,91 @@ test "select with in_list empty array renders FALSE" {
   assert_eq(q.params, [])
 }
 
+///|
 test "select with not_in_list empty array renders TRUE" {
   let q = @builder.select()
     .all()
     .from("users")
     .where_(@builder.col("id").not_in_list([]))
     .build()
-  assert_eq(
-    q.sql,
-    "SELECT * FROM \"users\" WHERE TRUE",
-  )
+  assert_eq(q.sql, "SELECT * FROM \"users\" WHERE TRUE")
   assert_eq(q.params, [])
 }
 
+///|
 test "insert with single column single value" {
   let q = @builder.insert_into("users")
     .columns(["name"])
     .values([@builder.val_str("Alice")])
     .build()
-  assert_eq(
-    q.sql,
-    "INSERT INTO \"users\" (\"name\") VALUES ($1)",
-  )
+  assert_eq(q.sql, "INSERT INTO \"users\" (\"name\") VALUES ($1)")
   assert_eq(q.params, [@ast.Value::String("Alice")])
 }
 
+///|
 test "update with single set" {
   let q = @builder.update("users")
     .set("active", @builder.val_bool(false))
     .where_(@builder.col("id").eq(@builder.val_int(1)))
     .build()
-  assert_eq(
-    q.sql,
-    "UPDATE \"users\" SET \"active\" = $1 WHERE (\"id\" = $2)",
-  )
+  assert_eq(q.sql, "UPDATE \"users\" SET \"active\" = $1 WHERE (\"id\" = $2)")
   assert_eq(q.params, [@ast.Value::Bool(false), @ast.Value::Int(1)])
 }
 
+///|
 test "delete with complex where" {
   let q = @builder.delete_from("users")
-    .where_(@builder.col("active").eq(@builder.val_bool(false)).or_(@builder.col("banned").eq(@builder.val_bool(true))))
+    .where_(
+      @builder.col("active")
+      .eq(@builder.val_bool(false))
+      .or_(@builder.col("banned").eq(@builder.val_bool(true))),
+    )
     .build()
   assert_eq(
     q.sql,
     "DELETE FROM \"users\" WHERE ((\"active\" = $1) OR (\"banned\" = $2))",
   )
-  assert_eq(
-    q.params,
-    [@ast.Value::Bool(false), @ast.Value::Bool(true)],
-  )
+  assert_eq(q.params, [@ast.Value::Bool(false), @ast.Value::Bool(true)])
 }
 
+///|
 test "select with many params ensures sequential numbering" {
   let q = @builder.insert_into("data")
     .columns(["a", "b", "c", "d", "e"])
-    .values([@builder.val_int(1), @builder.val_int(2), @builder.val_int(3), @builder.val_int(4), @builder.val_int(5)])
-    .values([@builder.val_int(6), @builder.val_int(7), @builder.val_int(8), @builder.val_int(9), @builder.val_int(10)])
+    .values([
+      @builder.val_int(1),
+      @builder.val_int(2),
+      @builder.val_int(3),
+      @builder.val_int(4),
+      @builder.val_int(5),
+    ])
+    .values([
+      @builder.val_int(6),
+      @builder.val_int(7),
+      @builder.val_int(8),
+      @builder.val_int(9),
+      @builder.val_int(10),
+    ])
     .build()
   assert_eq(
     q.sql,
     "INSERT INTO \"data\" (\"a\", \"b\", \"c\", \"d\", \"e\") VALUES ($1, $2, $3, $4, $5), ($6, $7, $8, $9, $10)",
   )
-  assert_eq(
-    q.params,
-    [
-      @ast.Value::Int(1),
-      @ast.Value::Int(2),
-      @ast.Value::Int(3),
-      @ast.Value::Int(4),
-      @ast.Value::Int(5),
-      @ast.Value::Int(6),
-      @ast.Value::Int(7),
-      @ast.Value::Int(8),
-      @ast.Value::Int(9),
-      @ast.Value::Int(10),
-    ],
-  )
+  assert_eq(q.params, [
+    @ast.Value::Int(1),
+    @ast.Value::Int(2),
+    @ast.Value::Int(3),
+    @ast.Value::Int(4),
+    @ast.Value::Int(5),
+    @ast.Value::Int(6),
+    @ast.Value::Int(7),
+    @ast.Value::Int(8),
+    @ast.Value::Int(9),
+    @ast.Value::Int(10),
+  ])
 }
 
+///|
 test "select distinct with where and order by" {
   let q = @builder.select()
     .distinct()
@@ -1478,6 +1591,7 @@ test "select distinct with where and order by" {
   assert_eq(q.params, [@ast.Value::Bool(true)])
 }
 
+///|
 test "select complex: join + where + group by + having + order by + limit" {
   let q = @builder.select()
     .column("department")
@@ -1485,11 +1599,15 @@ test "select complex: join + where + group by + having + order by + limit" {
     .from_as("employees", "e")
     .join(
       "departments",
-      @builder.table_col("e", "dept_id").eq(@builder.table_col("departments", "id")),
+      @builder.table_col("e", "dept_id").eq(
+        @builder.table_col("departments", "id"),
+      ),
     )
     .where_(@builder.col("active").eq(@builder.val_bool(true)))
     .group_by("department")
-    .having(@builder.func("COUNT", [@builder.asterisk()]).gt(@builder.val_int(3)))
+    .having(
+      @builder.func("COUNT", [@builder.asterisk()]).gt(@builder.val_int(3)),
+    )
     .order_by("department", @ast.Asc)
     .limit(10)
     .build()
@@ -1497,20 +1615,26 @@ test "select complex: join + where + group by + having + order by + limit" {
     q.sql,
     "SELECT \"department\", COUNT(*) AS \"cnt\" FROM \"employees\" AS \"e\" INNER JOIN \"departments\" ON (\"e\".\"dept_id\" = \"departments\".\"id\") WHERE (\"active\" = $1) GROUP BY \"department\" HAVING (COUNT(*) > $2) ORDER BY \"department\" ASC LIMIT $3",
   )
-  assert_eq(
-    q.params,
-    [@ast.Value::Bool(true), @ast.Value::Int(3), @ast.Value::Int(10)],
-  )
+  assert_eq(q.params, [
+    @ast.Value::Bool(true),
+    @ast.Value::Int(3),
+    @ast.Value::Int(10),
+  ])
 }
 
+///|
 test "select is null or combined with lt" {
   let q = @builder.select()
     .column("id")
     .from("glyph")
     .where_(
       @builder.col("aspect")
-        .is_null()
-        .or_(@builder.col("aspect").is_not_null().and_(@builder.col("aspect").lt(@builder.val_int(8)))),
+      .is_null()
+      .or_(
+        @builder.col("aspect")
+        .is_not_null()
+        .and_(@builder.col("aspect").lt(@builder.val_int(8))),
+      ),
     )
     .build()
   assert_eq(
@@ -1520,6 +1644,7 @@ test "select is null or combined with lt" {
   assert_eq(q.params, [@ast.Value::Int(8)])
 }
 
+///|
 test "update with set to null" {
   let q = @builder.update("users")
     .set("deleted_at", @builder.val_null())
@@ -1532,6 +1657,7 @@ test "update with set to null" {
   assert_eq(q.params, [@ast.Value::Null, @ast.Value::Int(1)])
 }
 
+///|
 test "insert three rows" {
   let q = @builder.insert_into("items")
     .columns(["name", "price"])
@@ -1543,51 +1669,51 @@ test "insert three rows" {
     q.sql,
     "INSERT INTO \"items\" (\"name\", \"price\") VALUES ($1, $2), ($3, $4), ($5, $6)",
   )
-  assert_eq(
-    q.params,
-    [
-      @ast.Value::String("A"),
-      @ast.Value::Int(10),
-      @ast.Value::String("B"),
-      @ast.Value::Int(20),
-      @ast.Value::String("C"),
-      @ast.Value::Int(30),
-    ],
-  )
+  assert_eq(q.params, [
+    @ast.Value::String("A"),
+    @ast.Value::Int(10),
+    @ast.Value::String("B"),
+    @ast.Value::Int(20),
+    @ast.Value::String("C"),
+    @ast.Value::Int(30),
+  ])
 }
 
+///|
 test "select with not in and between combined" {
   let q = @builder.select()
     .all()
     .from("products")
-    .where_(@builder.col("category").not_in_list([@builder.val_str("hidden"), @builder.val_str("draft")]))
-    .where_(@builder.col("price").between(@builder.val_int(10), @builder.val_int(100)))
+    .where_(
+      @builder.col("category").not_in_list([
+        @builder.val_str("hidden"),
+        @builder.val_str("draft"),
+      ]),
+    )
+    .where_(
+      @builder.col("price").between(@builder.val_int(10), @builder.val_int(100)),
+    )
     .build()
   assert_eq(
     q.sql,
     "SELECT * FROM \"products\" WHERE (\"category\" NOT IN ($1, $2) AND \"price\" BETWEEN $3 AND $4)",
   )
-  assert_eq(
-    q.params,
-    [
-      @ast.Value::String("hidden"),
-      @ast.Value::String("draft"),
-      @ast.Value::Int(10),
-      @ast.Value::Int(100),
-    ],
-  )
+  assert_eq(q.params, [
+    @ast.Value::String("hidden"),
+    @ast.Value::String("draft"),
+    @ast.Value::Int(10),
+    @ast.Value::Int(100),
+  ])
 }
 
+///|
 test "select with single in_list item" {
   let q = @builder.select()
     .all()
     .from("users")
     .where_(@builder.col("id").in_list([@builder.val_int(42)]))
     .build()
-  assert_eq(
-    q.sql,
-    "SELECT * FROM \"users\" WHERE \"id\" IN ($1)",
-  )
+  assert_eq(q.sql, "SELECT * FROM \"users\" WHERE \"id\" IN ($1)")
   assert_eq(q.params, [@ast.Value::Int(42)])
 }
 
@@ -1595,6 +1721,7 @@ test "select with single in_list item" {
 // Identifier escaping
 // ========================================================
 
+///|
 test "identifier with double quote is escaped" {
   let q = @builder.select().column("col\"name").from("my\"table").build()
   assert_eq(q.sql, "SELECT \"col\"\"name\" FROM \"my\"\"table\"")
@@ -1604,13 +1731,21 @@ test "identifier with double quote is escaped" {
 // Function name validation
 // ========================================================
 
+///|
 test "function name with valid characters" {
-  let q = @builder.select().expr(@builder.func("COUNT", [@builder.asterisk()])).from("t").build()
+  let q = @builder.select()
+    .expr(@builder.func("COUNT", [@builder.asterisk()]))
+    .from("t")
+    .build()
   assert_eq(q.sql, "SELECT COUNT(*) FROM \"t\"")
 }
 
+///|
 test "function name with dot for schema qualified" {
-  let q = @builder.select().expr(@builder.func("pg_catalog.array_agg", [@builder.col("x")])).from("t").build()
+  let q = @builder.select()
+    .expr(@builder.func("pg_catalog.array_agg", [@builder.col("x")]))
+    .from("t")
+    .build()
   assert_eq(q.sql, "SELECT pg_catalog.array_agg(\"x\") FROM \"t\"")
 }
 
@@ -1618,6 +1753,7 @@ test "function name with dot for schema qualified" {
 // JOIN with alias
 // ========================================================
 
+///|
 test "join with alias" {
   let q = @builder.select()
     .all()
@@ -1634,6 +1770,7 @@ test "join with alias" {
   )
 }
 
+///|
 test "left join with alias" {
   let q = @builder.select()
     .all()
@@ -1650,6 +1787,7 @@ test "left join with alias" {
   )
 }
 
+///|
 test "right join with alias" {
   let q = @builder.select()
     .all()
@@ -1666,6 +1804,7 @@ test "right join with alias" {
   )
 }
 
+///|
 test "full join with alias" {
   let q = @builder.select()
     .all()
@@ -1682,20 +1821,26 @@ test "full join with alias" {
   )
 }
 
+///|
 test "cross join with alias" {
-  let q = @builder.select().all().from("colors").cross_join_as("sizes", "s").build()
-  assert_eq(
-    q.sql,
-    "SELECT * FROM \"colors\" CROSS JOIN \"sizes\" AS \"s\"",
-  )
+  let q = @builder.select()
+    .all()
+    .from("colors")
+    .cross_join_as("sizes", "s")
+    .build()
+  assert_eq(q.sql, "SELECT * FROM \"colors\" CROSS JOIN \"sizes\" AS \"s\"")
 }
 
 // ========================================================
 // Subquery: FROM subquery
 // ========================================================
 
+///|
 test "select from subquery" {
-  let sub = @builder.select().columns(["id"]).from("users").where_(@builder.col("active").eq(@builder.val_bool(true)))
+  let sub = @builder.select()
+    .columns(["id"])
+    .from("users")
+    .where_(@builder.col("active").eq(@builder.val_bool(true)))
   let q = @builder.select().all().from_sub(sub, "sub").build()
   assert_eq(
     q.sql,
@@ -1704,6 +1849,7 @@ test "select from subquery" {
   assert_eq(q.params, [@ast.Value::Bool(true)])
 }
 
+///|
 test "select from subquery with where" {
   let sub = @builder.select().columns(["id", "name"]).from("users")
   let q = @builder.select()
@@ -1718,8 +1864,12 @@ test "select from subquery with where" {
   assert_eq(q.params, [@ast.Value::Int(10)])
 }
 
+///|
 test "select from subquery with join" {
-  let sub = @builder.select().columns(["user_id", "total"]).from("orders").where_(@builder.col("total").gt(@builder.val_int(100)))
+  let sub = @builder.select()
+    .columns(["user_id", "total"])
+    .from("orders")
+    .where_(@builder.col("total").gt(@builder.val_int(100)))
   let q = @builder.select()
     .all()
     .from_sub(sub, "o")
@@ -1739,8 +1889,12 @@ test "select from subquery with join" {
 // Subquery: IN subquery
 // ========================================================
 
+///|
 test "select with in subquery" {
-  let sub = @builder.select().column("id").from("users").where_(@builder.col("active").eq(@builder.val_bool(true)))
+  let sub = @builder.select()
+    .column("id")
+    .from("users")
+    .where_(@builder.col("active").eq(@builder.val_bool(true)))
   let q = @builder.select()
     .all()
     .from("orders")
@@ -1753,6 +1907,7 @@ test "select with in subquery" {
   assert_eq(q.params, [@ast.Value::Bool(true)])
 }
 
+///|
 test "select with not in subquery" {
   let sub = @builder.select().column("id").from("banned_users")
   let q = @builder.select()
@@ -1767,8 +1922,12 @@ test "select with not in subquery" {
   assert_eq(q.params, [])
 }
 
+///|
 test "select with in subquery and other conditions" {
-  let sub = @builder.select().column("user_id").from("orders").where_(@builder.col("total").gt(@builder.val_int(1000)))
+  let sub = @builder.select()
+    .column("user_id")
+    .from("orders")
+    .where_(@builder.col("total").gt(@builder.val_int(1000)))
   let q = @builder.select()
     .all()
     .from("users")
@@ -1786,8 +1945,12 @@ test "select with in subquery and other conditions" {
 // CTE (WITH)
 // ========================================================
 
+///|
 test "select with CTE" {
-  let cte = @builder.select().columns(["id", "name"]).from("users").where_(@builder.col("active").eq(@builder.val_bool(true)))
+  let cte = @builder.select()
+    .columns(["id", "name"])
+    .from("users")
+    .where_(@builder.col("active").eq(@builder.val_bool(true)))
   let q = @builder.select()
     .with_("active_users", cte)
     .all()
@@ -1800,9 +1963,16 @@ test "select with CTE" {
   assert_eq(q.params, [@ast.Value::Bool(true)])
 }
 
+///|
 test "select with multiple CTEs" {
-  let cte1 = @builder.select().columns(["id", "name"]).from("users").where_(@builder.col("active").eq(@builder.val_bool(true)))
-  let cte2 = @builder.select().columns(["user_id", "total"]).from("orders").where_(@builder.col("total").gt(@builder.val_int(100)))
+  let cte1 = @builder.select()
+    .columns(["id", "name"])
+    .from("users")
+    .where_(@builder.col("active").eq(@builder.val_bool(true)))
+  let cte2 = @builder.select()
+    .columns(["user_id", "total"])
+    .from("orders")
+    .where_(@builder.col("total").gt(@builder.val_int(100)))
   let q = @builder.select()
     .with_("active_users", cte1)
     .with_("big_orders", cte2)
@@ -1810,7 +1980,9 @@ test "select with multiple CTEs" {
     .from("active_users")
     .join(
       "big_orders",
-      @builder.table_col("active_users", "id").eq(@builder.table_col("big_orders", "user_id")),
+      @builder.table_col("active_users", "id").eq(
+        @builder.table_col("big_orders", "user_id"),
+      ),
     )
     .build()
   assert_eq(
@@ -1820,6 +1992,7 @@ test "select with multiple CTEs" {
   assert_eq(q.params, [@ast.Value::Bool(true), @ast.Value::Int(100)])
 }
 
+///|
 test "select with CTE and where" {
   let cte = @builder.select().column("id").from("users")
   let q = @builder.select()
@@ -1839,19 +2012,18 @@ test "select with CTE and where" {
 // UNION / INTERSECT / EXCEPT
 // ========================================================
 
+///|
 test "select union" {
   let q = @builder.select()
     .all()
     .from("table_a")
     .union(@builder.select().all().from("table_b"))
     .build()
-  assert_eq(
-    q.sql,
-    "SELECT * FROM \"table_a\" UNION SELECT * FROM \"table_b\"",
-  )
+  assert_eq(q.sql, "SELECT * FROM \"table_a\" UNION SELECT * FROM \"table_b\"")
   assert_eq(q.params, [])
 }
 
+///|
 test "select union all" {
   let q = @builder.select()
     .all()
@@ -1865,6 +2037,7 @@ test "select union all" {
   assert_eq(q.params, [])
 }
 
+///|
 test "select intersect" {
   let q = @builder.select()
     .all()
@@ -1878,6 +2051,7 @@ test "select intersect" {
   assert_eq(q.params, [])
 }
 
+///|
 test "select intersect all" {
   let q = @builder.select()
     .all()
@@ -1891,19 +2065,18 @@ test "select intersect all" {
   assert_eq(q.params, [])
 }
 
+///|
 test "select except" {
   let q = @builder.select()
     .all()
     .from("table_a")
     .except_(@builder.select().all().from("table_b"))
     .build()
-  assert_eq(
-    q.sql,
-    "SELECT * FROM \"table_a\" EXCEPT SELECT * FROM \"table_b\"",
-  )
+  assert_eq(q.sql, "SELECT * FROM \"table_a\" EXCEPT SELECT * FROM \"table_b\"")
   assert_eq(q.params, [])
 }
 
+///|
 test "select except all" {
   let q = @builder.select()
     .all()
@@ -1917,6 +2090,7 @@ test "select except all" {
   assert_eq(q.params, [])
 }
 
+///|
 test "select union with params" {
   let q = @builder.select()
     .all()
@@ -1924,21 +2098,19 @@ test "select union with params" {
     .where_(@builder.col("role").eq(@builder.val_str("admin")))
     .union(
       @builder.select()
-        .all()
-        .from("users")
-        .where_(@builder.col("role").eq(@builder.val_str("mod"))),
+      .all()
+      .from("users")
+      .where_(@builder.col("role").eq(@builder.val_str("mod"))),
     )
     .build()
   assert_eq(
     q.sql,
     "SELECT * FROM \"users\" WHERE (\"role\" = $1) UNION SELECT * FROM \"users\" WHERE (\"role\" = $2)",
   )
-  assert_eq(
-    q.params,
-    [@ast.Value::String("admin"), @ast.Value::String("mod")],
-  )
+  assert_eq(q.params, [@ast.Value::String("admin"), @ast.Value::String("mod")])
 }
 
+///|
 test "select union with order by and limit" {
   let q = @builder.select()
     .all()
@@ -1954,6 +2126,7 @@ test "select union with order by and limit" {
   assert_eq(q.params, [@ast.Value::Int(10)])
 }
 
+///|
 test "select multiple unions" {
   let q = @builder.select()
     .all()
@@ -1972,6 +2145,7 @@ test "select multiple unions" {
 // Upsert (INSERT ON CONFLICT)
 // ========================================================
 
+///|
 test "insert on conflict do nothing" {
   let q = @builder.insert_into("users")
     .columns(["id", "name"])
@@ -1982,114 +2156,107 @@ test "insert on conflict do nothing" {
     q.sql,
     "INSERT INTO \"users\" (\"id\", \"name\") VALUES ($1, $2) ON CONFLICT (\"id\") DO NOTHING",
   )
-  assert_eq(
-    q.params,
-    [@ast.Value::Int(1), @ast.Value::String("Alice")],
-  )
+  assert_eq(q.params, [@ast.Value::Int(1), @ast.Value::String("Alice")])
 }
 
+///|
 test "insert on conflict do update" {
   let q = @builder.insert_into("users")
     .columns(["id", "name", "email"])
-    .values([@builder.val_int(1), @builder.val_str("Alice"), @builder.val_str("alice@example.com")])
-    .on_conflict_do_update(
-      ["id"],
-      [
-        ("name", @builder.table_col("excluded", "name")),
-        ("email", @builder.table_col("excluded", "email")),
-      ],
-    )
+    .values([
+      @builder.val_int(1),
+      @builder.val_str("Alice"),
+      @builder.val_str("alice@example.com"),
+    ])
+    .on_conflict_do_update(["id"], [
+      ("name", @builder.table_col("excluded", "name")),
+      ("email", @builder.table_col("excluded", "email")),
+    ])
     .build()
   assert_eq(
     q.sql,
     "INSERT INTO \"users\" (\"id\", \"name\", \"email\") VALUES ($1, $2, $3) ON CONFLICT (\"id\") DO UPDATE SET \"name\" = \"excluded\".\"name\", \"email\" = \"excluded\".\"email\"",
   )
-  assert_eq(
-    q.params,
-    [
-      @ast.Value::Int(1),
-      @ast.Value::String("Alice"),
-      @ast.Value::String("alice@example.com"),
-    ],
-  )
+  assert_eq(q.params, [
+    @ast.Value::Int(1),
+    @ast.Value::String("Alice"),
+    @ast.Value::String("alice@example.com"),
+  ])
 }
 
+///|
 test "insert on conflict do update with value" {
   let q = @builder.insert_into("counters")
     .columns(["key", "value"])
     .values([@builder.val_str("hits"), @builder.val_int(1)])
-    .on_conflict_do_update(
-      ["key"],
-      [("value", @builder.table_col("counters", "value").add(@builder.val_int(1)))],
-    )
+    .on_conflict_do_update(["key"], [
+      (
+        "value",
+        @builder.table_col("counters", "value").add(@builder.val_int(1)),
+      ),
+    ])
     .build()
   assert_eq(
     q.sql,
     "INSERT INTO \"counters\" (\"key\", \"value\") VALUES ($1, $2) ON CONFLICT (\"key\") DO UPDATE SET \"value\" = (\"counters\".\"value\" + $3)",
   )
-  assert_eq(
-    q.params,
-    [
-      @ast.Value::String("hits"),
-      @ast.Value::Int(1),
-      @ast.Value::Int(1),
-    ],
-  )
+  assert_eq(q.params, [
+    @ast.Value::String("hits"),
+    @ast.Value::Int(1),
+    @ast.Value::Int(1),
+  ])
 }
 
+///|
 test "insert on conflict multiple columns" {
   let q = @builder.insert_into("user_roles")
     .columns(["user_id", "role_id", "granted_at"])
-    .values([@builder.val_int(1), @builder.val_int(2), @builder.val_str("2024-01-01")])
+    .values([
+      @builder.val_int(1),
+      @builder.val_int(2),
+      @builder.val_str("2024-01-01"),
+    ])
     .on_conflict_do_nothing(["user_id", "role_id"])
     .build()
   assert_eq(
     q.sql,
     "INSERT INTO \"user_roles\" (\"user_id\", \"role_id\", \"granted_at\") VALUES ($1, $2, $3) ON CONFLICT (\"user_id\", \"role_id\") DO NOTHING",
   )
-  assert_eq(
-    q.params,
-    [
-      @ast.Value::Int(1),
-      @ast.Value::Int(2),
-      @ast.Value::String("2024-01-01"),
-    ],
-  )
+  assert_eq(q.params, [
+    @ast.Value::Int(1),
+    @ast.Value::Int(2),
+    @ast.Value::String("2024-01-01"),
+  ])
 }
 
+///|
 test "insert on conflict do update with returning" {
   let q = @builder.insert_into("users")
     .columns(["id", "name"])
     .values([@builder.val_int(1), @builder.val_str("Alice")])
-    .on_conflict_do_update(
-      ["id"],
-      [("name", @builder.table_col("excluded", "name"))],
-    )
+    .on_conflict_do_update(["id"], [
+      ("name", @builder.table_col("excluded", "name")),
+    ])
     .returning(["id", "name"])
     .build()
   assert_eq(
     q.sql,
     "INSERT INTO \"users\" (\"id\", \"name\") VALUES ($1, $2) ON CONFLICT (\"id\") DO UPDATE SET \"name\" = \"excluded\".\"name\" RETURNING \"id\", \"name\"",
   )
-  assert_eq(
-    q.params,
-    [@ast.Value::Int(1), @ast.Value::String("Alice")],
-  )
+  assert_eq(q.params, [@ast.Value::Int(1), @ast.Value::String("Alice")])
 }
 
 // ========================================================
 // Window Functions
 // ========================================================
 
+///|
 test "select with row_number window function" {
   let q = @builder.select()
     .expr_as(
-      @builder.window_func(
-        "ROW_NUMBER",
-        [],
-        partition_by=["dept"],
-        order_by=[("salary", @ast.Desc)],
-      ),
+      @builder.window_func("ROW_NUMBER", [], partition_by=["dept"], order_by=[
+        ("salary", @ast.Desc),
+      ]),
       "rank",
     )
     .from("employees")
@@ -2101,15 +2268,12 @@ test "select with row_number window function" {
   assert_eq(q.params, [])
 }
 
+///|
 test "select with rank window function" {
   let q = @builder.select()
     .column("name")
     .expr_as(
-      @builder.window_func(
-        "RANK",
-        [],
-        order_by=[("score", @ast.Desc)],
-      ),
+      @builder.window_func("RANK", [], order_by=[("score", @ast.Desc)]),
       "rank",
     )
     .from("players")
@@ -2121,6 +2285,7 @@ test "select with rank window function" {
   assert_eq(q.params, [])
 }
 
+///|
 test "select with sum window function" {
   let q = @builder.select()
     .column("month")
@@ -2143,14 +2308,11 @@ test "select with sum window function" {
   assert_eq(q.params, [])
 }
 
+///|
 test "select with window function partition only" {
   let q = @builder.select()
     .expr_as(
-      @builder.window_func(
-        "COUNT",
-        [@builder.asterisk()],
-        partition_by=["dept"],
-      ),
+      @builder.window_func("COUNT", [@builder.asterisk()], partition_by=["dept"]),
       "dept_count",
     )
     .from("employees")
@@ -2162,14 +2324,11 @@ test "select with window function partition only" {
   assert_eq(q.params, [])
 }
 
+///|
 test "select with window function order only" {
   let q = @builder.select()
     .expr_as(
-      @builder.window_func(
-        "ROW_NUMBER",
-        [],
-        order_by=[("id", @ast.Asc)],
-      ),
+      @builder.window_func("ROW_NUMBER", [], order_by=[("id", @ast.Asc)]),
       "row_num",
     )
     .from("users")
@@ -2181,15 +2340,14 @@ test "select with window function order only" {
   assert_eq(q.params, [])
 }
 
+///|
 test "select with window function multiple partition and order" {
   let q = @builder.select()
     .expr_as(
-      @builder.window_func(
-        "ROW_NUMBER",
-        [],
-        partition_by=["dept", "team"],
-        order_by=[("salary", @ast.Desc), ("name", @ast.Asc)],
-      ),
+      @builder.window_func("ROW_NUMBER", [], partition_by=["dept", "team"], order_by=[
+        ("salary", @ast.Desc),
+        ("name", @ast.Asc),
+      ]),
       "rank",
     )
     .from("employees")
@@ -2205,6 +2363,7 @@ test "select with window function multiple partition and order" {
 // Combined: CTE with UNION
 // ========================================================
 
+///|
 test "CTE with union inside" {
   let cte_query = @builder.select()
     .column("id")
@@ -2226,8 +2385,12 @@ test "CTE with union inside" {
 // Combined: Subquery in WHERE with UNION
 // ========================================================
 
+///|
 test "subquery with params in nested context" {
-  let sub = @builder.select().column("id").from("users").where_(@builder.col("age").gt(@builder.val_int(18)))
+  let sub = @builder.select()
+    .column("id")
+    .from("users")
+    .where_(@builder.col("age").gt(@builder.val_int(18)))
   let q = @builder.select()
     .all()
     .from("orders")
@@ -2240,20 +2403,22 @@ test "subquery with params in nested context" {
     q.sql,
     "SELECT * FROM \"orders\" WHERE (\"user_id\" IN (SELECT \"id\" FROM \"users\" WHERE (\"age\" > $1)) AND (\"total\" > $2)) ORDER BY \"total\" DESC LIMIT $3",
   )
-  assert_eq(
-    q.params,
-    [@ast.Value::Int(18), @ast.Value::Int(50), @ast.Value::Int(10)],
-  )
+  assert_eq(q.params, [
+    @ast.Value::Int(18),
+    @ast.Value::Int(50),
+    @ast.Value::Int(10),
+  ])
 }
 
 // ========================================================
 // BuildError: raise テスト
 // ========================================================
 
+///|
 test "insert empty values raises EmptyValues" {
-  let result = try {
-    Result::Ok(@builder.insert_into("users").columns(["name"]).build())
-  } catch {
+  let result = Result::Ok(
+    @builder.insert_into("users").columns(["name"]).build(),
+  ) catch {
     err => Err(err)
   }
   match result {
@@ -2262,10 +2427,13 @@ test "insert empty values raises EmptyValues" {
   }
 }
 
+///|
 test "update empty assignments raises EmptyAssignments" {
-  let result = try {
-    Result::Ok(@builder.update("users").where_(@builder.col("id").eq(@builder.val_int(1))).build())
-  } catch {
+  let result = Result::Ok(
+    @builder.update("users")
+    .where_(@builder.col("id").eq(@builder.val_int(1)))
+    .build(),
+  ) catch {
     err => Err(err)
   }
   match result {
@@ -2274,16 +2442,15 @@ test "update empty assignments raises EmptyAssignments" {
   }
 }
 
+///|
 test "on_conflict_do_nothing empty columns raises EmptyConflictColumns" {
-  let result = try {
-    Result::Ok(
-      @builder.insert_into("users")
-        .columns(["name"])
-        .values([@builder.val_str("Alice")])
-        .on_conflict_do_nothing([])
-        .build(),
-    )
-  } catch {
+  let result = Result::Ok(
+    @builder.insert_into("users")
+    .columns(["name"])
+    .values([@builder.val_str("Alice")])
+    .on_conflict_do_nothing([])
+    .build(),
+  ) catch {
     err => Err(err)
   }
   match result {
@@ -2292,16 +2459,17 @@ test "on_conflict_do_nothing empty columns raises EmptyConflictColumns" {
   }
 }
 
+///|
 test "on_conflict_do_update empty columns raises EmptyConflictColumns" {
-  let result = try {
-    Result::Ok(
-      @builder.insert_into("users")
-        .columns(["name"])
-        .values([@builder.val_str("Alice")])
-        .on_conflict_do_update([], [("name", @builder.table_col("excluded", "name"))])
-        .build(),
-    )
-  } catch {
+  let result = Result::Ok(
+    @builder.insert_into("users")
+    .columns(["name"])
+    .values([@builder.val_str("Alice")])
+    .on_conflict_do_update([], [
+      ("name", @builder.table_col("excluded", "name")),
+    ])
+    .build(),
+  ) catch {
     err => Err(err)
   }
   match result {
@@ -2310,10 +2478,9 @@ test "on_conflict_do_update empty columns raises EmptyConflictColumns" {
   }
 }
 
+///|
 test "func invalid name raises InvalidFuncName" {
-  let result = try {
-    Result::Ok(@builder.func("COUNT(*)", []))
-  } catch {
+  let result = Result::Ok(@builder.func("COUNT(*)", [])) catch {
     err => Err(err)
   }
   match result {
@@ -2322,10 +2489,9 @@ test "func invalid name raises InvalidFuncName" {
   }
 }
 
+///|
 test "window_func invalid name raises InvalidFuncName" {
-  let result = try {
-    Result::Ok(@builder.window_func("ROW; DROP TABLE--", []))
-  } catch {
+  let result = Result::Ok(@builder.window_func("ROW; DROP TABLE--", [])) catch {
     err => Err(err)
   }
   match result {
@@ -2338,14 +2504,19 @@ test "window_func invalid name raises InvalidFuncName" {
 // HAVING: AND 結合テスト
 // ========================================================
 
+///|
 test "having with multiple conditions AND-combined" {
   let q = @builder.select()
     .column("dept")
     .expr_as(@builder.func("COUNT", [@builder.asterisk()]), "cnt")
     .from("employees")
     .group_by("dept")
-    .having(@builder.func("COUNT", [@builder.asterisk()]).gt(@builder.val_int(5)))
-    .having(@builder.func("COUNT", [@builder.asterisk()]).lt(@builder.val_int(100)))
+    .having(
+      @builder.func("COUNT", [@builder.asterisk()]).gt(@builder.val_int(5)),
+    )
+    .having(
+      @builder.func("COUNT", [@builder.asterisk()]).lt(@builder.val_int(100)),
+    )
     .build()
   assert_eq(
     q.sql,
@@ -2358,18 +2529,17 @@ test "having with multiple conditions AND-combined" {
 // 算術ヘルパー: add, sub_, mul, div, not_, neg
 // ========================================================
 
+///|
 test "arithmetic helper: add" {
   let q = @builder.select()
     .expr_as(@builder.col("price").add(@builder.col("tax")), "total")
     .from("items")
     .build()
-  assert_eq(
-    q.sql,
-    "SELECT (\"price\" + \"tax\") AS \"total\" FROM \"items\"",
-  )
+  assert_eq(q.sql, "SELECT (\"price\" + \"tax\") AS \"total\" FROM \"items\"")
   assert_eq(q.params, [])
 }
 
+///|
 test "arithmetic helper: sub_" {
   let q = @builder.select()
     .expr_as(@builder.col("price").sub_(@builder.col("discount")), "net")
@@ -2382,6 +2552,7 @@ test "arithmetic helper: sub_" {
   assert_eq(q.params, [])
 }
 
+///|
 test "arithmetic helper: mul" {
   let q = @builder.select()
     .expr_as(@builder.col("price").mul(@builder.col("quantity")), "total")
@@ -2394,6 +2565,7 @@ test "arithmetic helper: mul" {
   assert_eq(q.params, [])
 }
 
+///|
 test "arithmetic helper: div" {
   let q = @builder.select()
     .expr_as(@builder.col("total").div(@builder.col("count")), "average")
@@ -2406,19 +2578,18 @@ test "arithmetic helper: div" {
   assert_eq(q.params, [])
 }
 
+///|
 test "arithmetic helper: not_" {
   let q = @builder.select()
     .all()
     .from("users")
     .where_(@builder.col("active").eq(@builder.val_bool(true)).not_())
     .build()
-  assert_eq(
-    q.sql,
-    "SELECT * FROM \"users\" WHERE (NOT (\"active\" = $1))",
-  )
+  assert_eq(q.sql, "SELECT * FROM \"users\" WHERE (NOT (\"active\" = $1))")
   assert_eq(q.params, [@ast.Value::Bool(true)])
 }
 
+///|
 test "arithmetic helper: neg" {
   let q = @builder.select()
     .expr(@builder.col("balance").neg())
@@ -2428,30 +2599,34 @@ test "arithmetic helper: neg" {
   assert_eq(q.params, [])
 }
 
+///|
 test "arithmetic helpers: combined expression" {
   let q = @builder.select()
     .columns(["character", "size_w", "size_h"])
     .from("character")
     .where_(
-      @builder.col("size_w").mul(@builder.val_int(2)).add(@builder.col("size_h").div(@builder.val_int(3))).eq(
-        @builder.val_int(4),
-      ),
+      @builder.col("size_w")
+      .mul(@builder.val_int(2))
+      .add(@builder.col("size_h").div(@builder.val_int(3)))
+      .eq(@builder.val_int(4)),
     )
     .build()
   assert_eq(
     q.sql,
     "SELECT \"character\", \"size_w\", \"size_h\" FROM \"character\" WHERE (((\"size_w\" * $1) + (\"size_h\" / $2)) = $3)",
   )
-  assert_eq(
-    q.params,
-    [@ast.Value::Int(2), @ast.Value::Int(3), @ast.Value::Int(4)],
-  )
+  assert_eq(q.params, [
+    @ast.Value::Int(2),
+    @ast.Value::Int(3),
+    @ast.Value::Int(4),
+  ])
 }
 
 // ========================================================
 // in_sub / not_in_sub ヘルパー
 // ========================================================
 
+///|
 test "in_sub helper" {
   let sub = @builder.select().column("id").from("active_users")
   let q = @builder.select()
@@ -2466,6 +2641,7 @@ test "in_sub helper" {
   assert_eq(q.params, [])
 }
 
+///|
 test "not_in_sub helper" {
   let sub = @builder.select().column("id").from("banned_users")
   let q = @builder.select()
@@ -2484,12 +2660,16 @@ test "not_in_sub helper" {
 // CASE WHEN
 // ========================================================
 
+///|
 test "case when single condition" {
   let q = @builder.select()
     .expr(
       @builder.case_()
-        .when_(@builder.col("status").eq(@builder.val_str("active")), @builder.val_str("Active"))
-        .end(),
+      .when_(
+        @builder.col("status").eq(@builder.val_str("active")),
+        @builder.val_str("Active"),
+      )
+      .end(),
     )
     .from("users")
     .build()
@@ -2497,20 +2677,27 @@ test "case when single condition" {
     q.sql,
     "SELECT CASE WHEN (\"status\" = $1) THEN $2 END FROM \"users\"",
   )
-  assert_eq(
-    q.params,
-    [@ast.Value::String("active"), @ast.Value::String("Active")],
-  )
+  assert_eq(q.params, [
+    @ast.Value::String("active"),
+    @ast.Value::String("Active"),
+  ])
 }
 
+///|
 test "case when two conditions with else" {
   let q = @builder.select()
     .expr_as(
       @builder.case_()
-        .when_(@builder.col("score").gte(@builder.val_int(90)), @builder.val_str("A"))
-        .when_(@builder.col("score").gte(@builder.val_int(70)), @builder.val_str("B"))
-        .else_(@builder.val_str("C"))
-        .end(),
+      .when_(
+        @builder.col("score").gte(@builder.val_int(90)),
+        @builder.val_str("A"),
+      )
+      .when_(
+        @builder.col("score").gte(@builder.val_int(70)),
+        @builder.val_str("B"),
+      )
+      .else_(@builder.val_str("C"))
+      .end(),
       "grade",
     )
     .from("students")
@@ -2519,24 +2706,25 @@ test "case when two conditions with else" {
     q.sql,
     "SELECT CASE WHEN (\"score\" >= $1) THEN $2 WHEN (\"score\" >= $3) THEN $4 ELSE $5 END AS \"grade\" FROM \"students\"",
   )
-  assert_eq(
-    q.params,
-    [
-      @ast.Value::Int(90),
-      @ast.Value::String("A"),
-      @ast.Value::Int(70),
-      @ast.Value::String("B"),
-      @ast.Value::String("C"),
-    ],
-  )
+  assert_eq(q.params, [
+    @ast.Value::Int(90),
+    @ast.Value::String("A"),
+    @ast.Value::Int(70),
+    @ast.Value::String("B"),
+    @ast.Value::String("C"),
+  ])
 }
 
+///|
 test "case when without else" {
   let q = @builder.select()
     .expr(
       @builder.case_()
-        .when_(@builder.col("active").eq(@builder.val_bool(true)), @builder.val_str("yes"))
-        .end(),
+      .when_(
+        @builder.col("active").eq(@builder.val_bool(true)),
+        @builder.val_str("yes"),
+      )
+      .end(),
     )
     .from("users")
     .build()
@@ -2544,48 +2732,53 @@ test "case when without else" {
     q.sql,
     "SELECT CASE WHEN (\"active\" = $1) THEN $2 END FROM \"users\"",
   )
-  assert_eq(
-    q.params,
-    [@ast.Value::Bool(true), @ast.Value::String("yes")],
-  )
+  assert_eq(q.params, [@ast.Value::Bool(true), @ast.Value::String("yes")])
 }
 
+///|
 test "case when used in where clause" {
   let q = @builder.select()
     .all()
     .from("orders")
     .where_(
       @builder.case_()
-        .when_(@builder.col("total").gt(@builder.val_int(1000)), @builder.val_str("large"))
-        .else_(@builder.val_str("small"))
-        .end()
-        .eq(@builder.val_str("large")),
+      .when_(
+        @builder.col("total").gt(@builder.val_int(1000)),
+        @builder.val_str("large"),
+      )
+      .else_(@builder.val_str("small"))
+      .end()
+      .eq(@builder.val_str("large")),
     )
     .build()
   assert_eq(
     q.sql,
     "SELECT * FROM \"orders\" WHERE (CASE WHEN (\"total\" > $1) THEN $2 ELSE $3 END = $4)",
   )
-  assert_eq(
-    q.params,
-    [
-      @ast.Value::Int(1000),
-      @ast.Value::String("large"),
-      @ast.Value::String("small"),
-      @ast.Value::String("large"),
-    ],
-  )
+  assert_eq(q.params, [
+    @ast.Value::Int(1000),
+    @ast.Value::String("large"),
+    @ast.Value::String("small"),
+    @ast.Value::String("large"),
+  ])
 }
 
+///|
 test "case when select expr with alias" {
   let q = @builder.select()
     .column("name")
     .expr_as(
       @builder.case_()
-        .when_(@builder.col("role").eq(@builder.val_str("admin")), @builder.val_int(1))
-        .when_(@builder.col("role").eq(@builder.val_str("mod")), @builder.val_int(2))
-        .else_(@builder.val_int(0))
-        .end(),
+      .when_(
+        @builder.col("role").eq(@builder.val_str("admin")),
+        @builder.val_int(1),
+      )
+      .when_(
+        @builder.col("role").eq(@builder.val_str("mod")),
+        @builder.val_int(2),
+      )
+      .else_(@builder.val_int(0))
+      .end(),
       "role_level",
     )
     .from("users")
@@ -2594,24 +2787,18 @@ test "case when select expr with alias" {
     q.sql,
     "SELECT \"name\", CASE WHEN (\"role\" = $1) THEN $2 WHEN (\"role\" = $3) THEN $4 ELSE $5 END AS \"role_level\" FROM \"users\"",
   )
-  assert_eq(
-    q.params,
-    [
-      @ast.Value::String("admin"),
-      @ast.Value::Int(1),
-      @ast.Value::String("mod"),
-      @ast.Value::Int(2),
-      @ast.Value::Int(0),
-    ],
-  )
+  assert_eq(q.params, [
+    @ast.Value::String("admin"),
+    @ast.Value::Int(1),
+    @ast.Value::String("mod"),
+    @ast.Value::Int(2),
+    @ast.Value::Int(0),
+  ])
 }
 
+///|
 test "case end with no when clauses raises EmptyWhenClauses" {
-  let result = try {
-    Result::Ok(@builder.case_().end())
-  } catch {
-    err => Err(err)
-  }
+  let result = Result::Ok(@builder.case_().end()) catch { err => Err(err) }
   match result {
     Err(@builder.BuildError::EmptyWhenClauses(_)) => ()
     _ => fail("expected EmptyWhenClauses")
@@ -2622,8 +2809,12 @@ test "case end with no when clauses raises EmptyWhenClauses" {
 // EXISTS / NOT EXISTS
 // ========================================================
 
+///|
 test "exists basic" {
-  let sub = @builder.select().column("id").from("orders").where_(@builder.col("user_id").eq(@builder.val_int(1)))
+  let sub = @builder.select()
+    .column("id")
+    .from("orders")
+    .where_(@builder.col("user_id").eq(@builder.val_int(1)))
   let q = @builder.select()
     .all()
     .from("users")
@@ -2636,6 +2827,7 @@ test "exists basic" {
   assert_eq(q.params, [@ast.Value::Int(1)])
 }
 
+///|
 test "not exists basic" {
   let sub = @builder.select().column("id").from("banned_users")
   let q = @builder.select()
@@ -2650,11 +2842,16 @@ test "not exists basic" {
   assert_eq(q.params, [])
 }
 
+///|
 test "exists in where correlated style" {
   let sub = @builder.select()
     .column("id")
     .from("orders")
-    .where_(@builder.table_col("orders", "user_id").eq(@builder.table_col("users", "id")))
+    .where_(
+      @builder.table_col("orders", "user_id").eq(
+        @builder.table_col("users", "id"),
+      ),
+    )
     .where_(@builder.col("total").gt(@builder.val_int(500)))
   let q = @builder.select()
     .all()
@@ -2668,8 +2865,12 @@ test "exists in where correlated style" {
   assert_eq(q.params, [@ast.Value::Int(500)])
 }
 
+///|
 test "exists combined with and condition" {
-  let sub = @builder.select().column("id").from("subscriptions").where_(@builder.col("active").eq(@builder.val_bool(true)))
+  let sub = @builder.select()
+    .column("id")
+    .from("subscriptions")
+    .where_(@builder.col("active").eq(@builder.val_bool(true)))
   let q = @builder.select()
     .all()
     .from("users")
@@ -2687,9 +2888,13 @@ test "exists combined with and condition" {
 // INSERT INTO ... SELECT
 // ========================================================
 
+///|
 test "insert from select basic" {
   let sub = @builder.select().columns(["name", "email"]).from("old_users")
-  let q = @builder.insert_into("users").columns(["name", "email"]).from_select(sub).build()
+  let q = @builder.insert_into("users")
+    .columns(["name", "email"])
+    .from_select(sub)
+    .build()
   assert_eq(
     q.sql,
     "INSERT INTO \"users\" (\"name\", \"email\") SELECT \"name\", \"email\" FROM \"old_users\"",
@@ -2697,9 +2902,16 @@ test "insert from select basic" {
   assert_eq(q.params, [])
 }
 
+///|
 test "insert from select with columns" {
-  let sub = @builder.select().columns(["username", "email"]).from("staging").where_(@builder.col("verified").eq(@builder.val_bool(true)))
-  let q = @builder.insert_into("users").columns(["name", "email"]).from_select(sub).build()
+  let sub = @builder.select()
+    .columns(["username", "email"])
+    .from("staging")
+    .where_(@builder.col("verified").eq(@builder.val_bool(true)))
+  let q = @builder.insert_into("users")
+    .columns(["name", "email"])
+    .from_select(sub)
+    .build()
   assert_eq(
     q.sql,
     "INSERT INTO \"users\" (\"name\", \"email\") SELECT \"username\", \"email\" FROM \"staging\" WHERE (\"verified\" = $1)",
@@ -2707,6 +2919,7 @@ test "insert from select with columns" {
   assert_eq(q.params, [@ast.Value::Bool(true)])
 }
 
+///|
 test "insert from select with returning" {
   let sub = @builder.select().columns(["name", "email"]).from("temp_users")
   let q = @builder.insert_into("users")
@@ -2721,12 +2934,16 @@ test "insert from select with returning" {
   assert_eq(q.params, [])
 }
 
+///|
 test "insert from select with where in sub" {
   let sub = @builder.select()
     .columns(["name", "score"])
     .from("candidates")
     .where_(@builder.col("score").gt(@builder.val_int(80)))
-  let q = @builder.insert_into("winners").columns(["name", "score"]).from_select(sub).build()
+  let q = @builder.insert_into("winners")
+    .columns(["name", "score"])
+    .from_select(sub)
+    .build()
   assert_eq(
     q.sql,
     "INSERT INTO \"winners\" (\"name\", \"score\") SELECT \"name\", \"score\" FROM \"candidates\" WHERE (\"score\" > $1)",
@@ -2734,15 +2951,16 @@ test "insert from select with where in sub" {
   assert_eq(q.params, [@ast.Value::Int(80)])
 }
 
+///|
 test "insert values and select both set raises ConflictingInsertSource" {
   let result = try {
     let sub = @builder.select().all().from("other")
     Result::Ok(
       @builder.insert_into("users")
-        .columns(["name"])
-        .values([@builder.val_str("Alice")])
-        .from_select(sub)
-        .build(),
+      .columns(["name"])
+      .values([@builder.val_str("Alice")])
+      .from_select(sub)
+      .build(),
     )
   } catch {
     err => Err(err)
@@ -2757,31 +2975,28 @@ test "insert values and select both set raises ConflictingInsertSource" {
 // @builder.raw(): verbatim SQL injection
 // ========================================================
 
+///|
 test "raw in SELECT expr" {
   let q = @builder.select()
     .expr_as(@builder.raw("current_timestamp"), "ts")
     .from("events")
     .build()
-  assert_eq(
-    q.sql,
-    "SELECT current_timestamp AS \"ts\" FROM \"events\"",
-  )
+  assert_eq(q.sql, "SELECT current_timestamp AS \"ts\" FROM \"events\"")
   assert_eq(q.params, [])
 }
 
+///|
 test "raw in WHERE clause" {
   let q = @builder.select()
     .column("id")
     .from("sessions")
     .where_(@builder.raw("expires_at > now()"))
     .build()
-  assert_eq(
-    q.sql,
-    "SELECT \"id\" FROM \"sessions\" WHERE expires_at > now()",
-  )
+  assert_eq(q.sql, "SELECT \"id\" FROM \"sessions\" WHERE expires_at > now()")
   assert_eq(q.params, [])
 }
 
+///|
 test "raw combined with typed expr" {
   let q = @builder.select()
     .column("id")
@@ -2799,6 +3014,7 @@ test "raw combined with typed expr" {
   assert_eq(q.params, [@ast.Value::String("error")])
 }
 
+///|
 test "raw in GROUP BY via group_by_expr" {
   let q = @builder.select()
     .expr_as(@builder.raw("date_trunc('month', created_at)"), "month")

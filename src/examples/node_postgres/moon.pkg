@@ -1,0 +1,6 @@
+import {
+  "ash1day/sql/ast",
+  "ash1day/sql/builder",
+}
+
+pkgtype(kind: "executable")

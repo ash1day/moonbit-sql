@@ -1,3 +1,4 @@
+///|
 /// SELECT statement AST
 pub(all) struct SelectStatement {
   distinct : Bool
@@ -14,6 +15,7 @@ pub(all) struct SelectStatement {
   ctes : Array[CTE]
 } derive(Show, Debug, Eq)
 
+///|
 /// Create an empty SelectStatement
 pub fn SelectStatement::new() -> SelectStatement {
   {
@@ -32,6 +34,7 @@ pub fn SelectStatement::new() -> SelectStatement {
   }
 }
 
+///|
 /// INSERT statement AST
 pub(all) struct InsertStatement {
   table : TableRef
@@ -42,6 +45,7 @@ pub(all) struct InsertStatement {
   on_conflict : OnConflict?
 } derive(Show, Debug, Eq)
 
+///|
 /// UPDATE statement AST
 pub(all) struct UpdateStatement {
   table : TableRef
@@ -50,6 +54,7 @@ pub(all) struct UpdateStatement {
   returning : Array[SelectItem]
 } derive(Show, Debug, Eq)
 
+///|
 /// DELETE statement AST
 pub(all) struct DeleteStatement {
   table : TableRef

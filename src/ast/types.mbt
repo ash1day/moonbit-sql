@@ -1,13 +1,15 @@
+///|
 /// SQL value types for parameterized queries
 pub(all) enum Value {
   Null
   Bool(Bool)
-  Int(Int)
+  Int(Int32)
   Int64(Int64)
   Double(Double)
   String(String)
 } derive(Show, Debug, Eq)
 
+///|
 /// Column reference
 pub(all) enum ColumnRef {
   /// Column name only: "id"
@@ -16,6 +18,7 @@ pub(all) enum ColumnRef {
   TableColumn(String, String)
 } derive(Show, Debug, Eq)
 
+///|
 /// Binary operators
 pub(all) enum BinOp {
   Eq
@@ -33,18 +36,21 @@ pub(all) enum BinOp {
   Div
 } derive(Show, Debug, Eq)
 
+///|
 /// Unary operators
 pub(all) enum UnOp {
   Not
   Neg
 } derive(Show, Debug, Eq)
 
+///|
 /// WHEN condition THEN result clause for CASE expressions
 pub(all) struct WhenClause {
   condition : Expr
   result : Expr
 } derive(Show, Debug, Eq)
 
+///|
 /// SQL expression (used in WHERE, SELECT, etc.)
 pub(all) enum Expr {
   Column(ColumnRef)
@@ -70,12 +76,14 @@ pub(all) enum Expr {
   Raw(String)
 } derive(Show, Debug, Eq)
 
+///|
 /// SQL function call
 pub(all) struct FuncCall {
   name : String
   args : Array[Expr]
 } derive(Show, Debug, Eq)
 
+///|
 /// Table reference
 pub(all) enum TableRef {
   /// Simple table name
@@ -88,6 +96,7 @@ pub(all) enum TableRef {
   SubQuery(SelectStatement, String)
 } derive(Show, Debug, Eq)
 
+///|
 /// SELECT target item
 pub(all) enum SelectItem {
   /// Expression: column, function, etc.
@@ -100,6 +109,7 @@ pub(all) enum SelectItem {
   TableAllColumns(String)
 } derive(Show, Debug, Eq)
 
+///|
 /// JOIN type
 pub(all) enum JoinType {
   Inner
@@ -109,6 +119,7 @@ pub(all) enum JoinType {
   Cross
 } derive(Show, Debug, Eq)
 
+///|
 /// JOIN clause
 pub(all) struct JoinClause {
   join_type : JoinType
@@ -116,24 +127,28 @@ pub(all) struct JoinClause {
   on : Expr
 } derive(Show, Debug, Eq)
 
+///|
 /// Sort order
 pub(all) enum Order {
   Asc
   Desc
 } derive(Show, Debug, Eq)
 
+///|
 /// ORDER BY item
 pub(all) struct OrderByItem {
   expr : Expr
   order : Order
 } derive(Show, Debug, Eq)
 
+///|
 /// Window specification for window functions
 pub(all) struct WindowSpec {
   partition_by : Array[Expr]
   order_by : Array[OrderByItem]
 } derive(Show, Debug, Eq)
 
+///|
 /// Set operation type
 pub(all) enum SetOpKind {
   Union
@@ -144,36 +159,42 @@ pub(all) enum SetOpKind {
   ExceptAll
 } derive(Show, Debug, Eq)
 
+///|
 /// Set operation: UNION/INTERSECT/EXCEPT with another SELECT
 pub(all) struct SetOperation {
   kind : SetOpKind
   select : SelectStatement
 } derive(Show, Debug, Eq)
 
+///|
 /// Common Table Expression (CTE)
 pub(all) struct CTE {
   name : String
   query : SelectStatement
 } derive(Show, Debug, Eq)
 
+///|
 /// ON CONFLICT action for upsert
 pub(all) enum OnConflictAction {
   DoNothing
   DoUpdate(Array[(String, Expr)])
 } derive(Show, Debug, Eq)
 
+///|
 /// ON CONFLICT clause for INSERT
 pub(all) struct OnConflict {
   columns : Array[String]
   action : OnConflictAction
 } derive(Show, Debug, Eq)
 
+///|
 /// Compiled query result: SQL string + parameter values
 pub(all) struct CompiledQuery {
   sql : String
   params : Array[Value]
 } derive(Show, Debug, Eq)
 
+///|
 /// Errors that can occur during SQL rendering
 pub suberror RenderError {
   InvalidFuncName(String)

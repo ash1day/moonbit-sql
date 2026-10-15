@@ -7,7 +7,7 @@ priv struct RenderContext {
 
 ///|
 fn RenderContext::new() -> RenderContext {
-  { buf: StringBuilder::new(), params: [] }
+  { buf: StringBuilder::new(), params: [], }
 }
 
 ///|
@@ -96,7 +96,7 @@ priv struct GroupedExpressions {
 fn render_expr(
   ctx : RenderContext,
   expr : Expr,
-  grouping? : GroupedExpressions? = None,
+  grouping~ : GroupedExpressions? = None,
 ) -> Unit raise {
   if grouping is Some(memo) && memo.expressions.contains(expr) {
     match memo.rendered.search_by(fn(item) { item.0 == expr }) {
@@ -121,7 +121,7 @@ fn render_expr(
 fn render_expr_body(
   ctx : RenderContext,
   expr : Expr,
-  grouping? : GroupedExpressions? = None,
+  grouping~ : GroupedExpressions? = None,
 ) -> Unit raise {
   match expr {
     Asterisk => ctx.write("*")
@@ -319,7 +319,7 @@ fn render_table_ref(ctx : RenderContext, table : TableRef) -> Unit raise {
 fn render_select_item(
   ctx : RenderContext,
   item : SelectItem,
-  grouping? : GroupedExpressions? = None,
+  grouping~ : GroupedExpressions? = None,
 ) -> Unit raise {
   match item {
     Expr(expr) => render_expr(ctx, expr, grouping~)
@@ -542,7 +542,7 @@ fn render_select_query(
 pub fn render_select(stmt : SelectStatement) -> CompiledQuery raise {
   let ctx = RenderContext::new()
   render_select_query(ctx, stmt)
-  { sql: ctx.to_sql(), params: ctx.params }
+  { sql: ctx.to_sql(), params: ctx.params, }
 }
 
 ///|
@@ -623,7 +623,7 @@ pub fn render_insert(stmt : InsertStatement) -> CompiledQuery raise {
       render_select_item(ctx, item)
     }
   }
-  { sql: ctx.to_sql(), params: ctx.params }
+  { sql: ctx.to_sql(), params: ctx.params, }
 }
 
 ///|
@@ -659,7 +659,7 @@ pub fn render_update(stmt : UpdateStatement) -> CompiledQuery raise {
       render_select_item(ctx, item)
     }
   }
-  { sql: ctx.to_sql(), params: ctx.params }
+  { sql: ctx.to_sql(), params: ctx.params, }
 }
 
 ///|
@@ -686,5 +686,5 @@ pub fn render_delete(stmt : DeleteStatement) -> CompiledQuery raise {
       render_select_item(ctx, item)
     }
   }
-  { sql: ctx.to_sql(), params: ctx.params }
+  { sql: ctx.to_sql(), params: ctx.params, }
 }

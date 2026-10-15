@@ -267,8 +267,10 @@ test "statement snapshot isolates FROM subqueries in both directions" {
 
 ///|
 test "scalar subquery retains WITH and surrounding parameter order" {
-  let seed = @builder.select()
-    .expr_as(@builder.val_int(7).add(@builder.raw("0")), "id")
+  let seed = @builder.select().expr_as(
+    @builder.val_int(7).add(@builder.raw("0")),
+    "id",
+  )
   let sub = @builder.select()
     .with_("seed", seed)
     .column("id")
@@ -278,14 +280,19 @@ test "scalar subquery retains WITH and surrounding parameter order" {
     .expr_as(@builder.val_int(9), "marker")
     .expr_as(@ast.Subquery(sub.build_statement()), "id")
     .build()
-  assert_eq(q.sql, "SELECT $1 AS \"marker\", (WITH \"seed\" AS (SELECT ($2 + 0) AS \"id\") SELECT \"id\" FROM \"seed\" WHERE (\"id\" > $3)) AS \"id\"")
+  assert_eq(
+    q.sql,
+    "SELECT $1 AS \"marker\", (WITH \"seed\" AS (SELECT ($2 + 0) AS \"id\") SELECT \"id\" FROM \"seed\" WHERE (\"id\" > $3)) AS \"id\"",
+  )
   assert_eq(q.params, [@ast.Int(9), @ast.Int(7), @ast.Int(3)])
 }
 
 ///|
 test "IN subquery retains WITH and surrounding parameter order" {
-  let seed = @builder.select()
-    .expr_as(@builder.val_int(7).add(@builder.raw("0")), "id")
+  let seed = @builder.select().expr_as(
+    @builder.val_int(7).add(@builder.raw("0")),
+    "id",
+  )
   let sub = @builder.select()
     .with_("seed", seed)
     .column("id")
@@ -295,14 +302,19 @@ test "IN subquery retains WITH and surrounding parameter order" {
     .expr_as(@builder.val_int(9), "marker")
     .where_(@builder.val_int(7).in_subquery(sub.build_statement()))
     .build()
-  assert_eq(q.sql, "SELECT $1 AS \"marker\" WHERE $2 IN (WITH \"seed\" AS (SELECT ($3 + 0) AS \"id\") SELECT \"id\" FROM \"seed\" WHERE (\"id\" > $4))")
+  assert_eq(
+    q.sql,
+    "SELECT $1 AS \"marker\" WHERE $2 IN (WITH \"seed\" AS (SELECT ($3 + 0) AS \"id\") SELECT \"id\" FROM \"seed\" WHERE (\"id\" > $4))",
+  )
   assert_eq(q.params, [@ast.Int(9), @ast.Int(7), @ast.Int(7), @ast.Int(3)])
 }
 
 ///|
 test "NOT IN subquery retains WITH and surrounding parameter order" {
-  let seed = @builder.select()
-    .expr_as(@builder.val_int(7).add(@builder.raw("0")), "id")
+  let seed = @builder.select().expr_as(
+    @builder.val_int(7).add(@builder.raw("0")),
+    "id",
+  )
   let sub = @builder.select()
     .with_("seed", seed)
     .column("id")
@@ -312,14 +324,19 @@ test "NOT IN subquery retains WITH and surrounding parameter order" {
     .expr_as(@builder.val_int(9), "marker")
     .where_(@builder.val_int(8).not_in_subquery(sub.build_statement()))
     .build()
-  assert_eq(q.sql, "SELECT $1 AS \"marker\" WHERE $2 NOT IN (WITH \"seed\" AS (SELECT ($3 + 0) AS \"id\") SELECT \"id\" FROM \"seed\" WHERE (\"id\" > $4))")
+  assert_eq(
+    q.sql,
+    "SELECT $1 AS \"marker\" WHERE $2 NOT IN (WITH \"seed\" AS (SELECT ($3 + 0) AS \"id\") SELECT \"id\" FROM \"seed\" WHERE (\"id\" > $4))",
+  )
   assert_eq(q.params, [@ast.Int(9), @ast.Int(8), @ast.Int(7), @ast.Int(3)])
 }
 
 ///|
 test "EXISTS subquery retains WITH and surrounding parameter order" {
-  let seed = @builder.select()
-    .expr_as(@builder.val_int(7).add(@builder.raw("0")), "id")
+  let seed = @builder.select().expr_as(
+    @builder.val_int(7).add(@builder.raw("0")),
+    "id",
+  )
   let sub = @builder.select()
     .with_("seed", seed)
     .column("id")
@@ -329,14 +346,19 @@ test "EXISTS subquery retains WITH and surrounding parameter order" {
     .expr_as(@builder.val_int(9), "marker")
     .where_(@builder.exists_(sub))
     .build()
-  assert_eq(q.sql, "SELECT $1 AS \"marker\" WHERE EXISTS (WITH \"seed\" AS (SELECT ($2 + 0) AS \"id\") SELECT \"id\" FROM \"seed\" WHERE (\"id\" > $3))")
+  assert_eq(
+    q.sql,
+    "SELECT $1 AS \"marker\" WHERE EXISTS (WITH \"seed\" AS (SELECT ($2 + 0) AS \"id\") SELECT \"id\" FROM \"seed\" WHERE (\"id\" > $3))",
+  )
   assert_eq(q.params, [@ast.Int(9), @ast.Int(7), @ast.Int(3)])
 }
 
 ///|
 test "NOT EXISTS subquery retains WITH and surrounding parameter order" {
-  let seed = @builder.select()
-    .expr_as(@builder.val_int(7).add(@builder.raw("0")), "id")
+  let seed = @builder.select().expr_as(
+    @builder.val_int(7).add(@builder.raw("0")),
+    "id",
+  )
   let sub = @builder.select()
     .with_("seed", seed)
     .column("id")
@@ -346,6 +368,9 @@ test "NOT EXISTS subquery retains WITH and surrounding parameter order" {
     .expr_as(@builder.val_int(9), "marker")
     .where_(@builder.not_exists(sub))
     .build()
-  assert_eq(q.sql, "SELECT $1 AS \"marker\" WHERE NOT EXISTS (WITH \"seed\" AS (SELECT ($2 + 0) AS \"id\") SELECT \"id\" FROM \"seed\" WHERE (\"id\" > $3))")
+  assert_eq(
+    q.sql,
+    "SELECT $1 AS \"marker\" WHERE NOT EXISTS (WITH \"seed\" AS (SELECT ($2 + 0) AS \"id\") SELECT \"id\" FROM \"seed\" WHERE (\"id\" > $3))",
+  )
   assert_eq(q.params, [@ast.Int(9), @ast.Int(7), @ast.Int(20)])
 }

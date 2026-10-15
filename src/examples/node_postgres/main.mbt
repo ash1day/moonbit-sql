@@ -20,7 +20,7 @@ fn to_pg_query(query : @ast.CompiledQuery) -> Json {
 
 ///|
 /// A dynamic search: only supplied filters become WHERE predicates.
-fn search_users(min_age : Int?, name : String?) -> @ast.CompiledQuery raise {
+fn search_users(min_age : Int32?, name : String?) -> @ast.CompiledQuery raise {
   let query = @builder.select().columns(["id", "name"]).from("users")
   if min_age is Some(age) {
     ignore(query.where_(@builder.col("age").gte(@builder.val_int(age))))

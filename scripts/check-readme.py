@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 """Compile and run every MoonBit README snippet against the working core."""
-import json
 from pathlib import Path
 import re
 import shutil
@@ -14,14 +13,14 @@ if not blocks:
 
 with tempfile.TemporaryDirectory(prefix="moonbit-sql-readme-") as directory:
     project = Path(directory)
-    (project / "moon.mod.json").write_text(json.dumps({"name": "ash1day/sql", "source": "src"}))
+    (project / "moon.mod").write_text('name = "ash1day/sql"\n\nsource = "src"\n')
     for package in ("ast", "builder"):
         shutil.copytree(root / "src" / package, project / "src" / package)
     examples = project / "src" / "readme"
     examples.mkdir()
-    (examples / "moon.pkg.json").write_text(json.dumps({
-        "import": ["ash1day/sql/ast", "ash1day/sql/builder"],
-    }))
+    (examples / "moon.pkg").write_text(
+        'import {\n  "ash1day/sql/ast",\n  "ash1day/sql/builder",\n}\n'
+    )
     source = "\n\n".join(
         f'test "README example {i}" {{\n{block}\n  ()\n}}'
         for i, block in enumerate(blocks, 1)

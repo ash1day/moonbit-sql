@@ -41,14 +41,12 @@ Their source and tests are archived in [legacy/](legacy/README.md); see
 moon add ash1day/sql
 ```
 
-Declare only the core packages in your `moon.pkg.json` (also supported by the pinned toolchain):
+Declare only the core packages in your `moon.pkg`:
 
-```json
-{
-  "import": [
-    "ash1day/sql/ast",
-    "ash1day/sql/builder"
-  ]
+```
+import {
+  "ash1day/sql/ast",
+  "ash1day/sql/builder",
 }
 ```
 
@@ -427,7 +425,7 @@ those packages, while migrating away from their limitations below.
 The source and all legacy tests are retained in [legacy/](legacy/README.md) for
 reference, outside the module's `src` root. They are not supported packages.
 The previous plan to retain them with deprecation warnings was insufficient:
-`moonbitlang/async@0.16.6` has parse errors with the pinned `moonc 0.10.14`,
+`moonbitlang/async@0.16.6` has parse errors with `moonc 0.10.14`,
 including on native, and the mixed JS/native imports also fail target checks.
 Legacy checks were last verified with `moonc v0.8.2+3382e0600`.
 
@@ -445,7 +443,7 @@ Known legacy limitations remain:
 ## Development
 
 The core's supported toolchain is pinned in [.moonbit-version](.moonbit-version):
-`moonc v0.10.14+7d59c7ec9` (moon `0.1.20260920`). CI installs that exact version.
+`moonc v0.10.15+943464bfa` (moon `0.1.20261012`). CI installs that exact version.
 Older toolchains are not the core compatibility target. Install the pin using the
 [official installer](https://www.moonbitlang.com/download/):
 

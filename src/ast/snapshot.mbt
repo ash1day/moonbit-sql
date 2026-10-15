@@ -40,12 +40,12 @@ pub fn Expr::snapshot(self : Expr) -> Expr {
 
 ///|
 fn snapshot_func(call : FuncCall) -> FuncCall {
-  { name: call.name, args: call.args.map(Expr::snapshot) }
+  { name: call.name, args: call.args.map(Expr::snapshot), }
 }
 
 ///|
 fn snapshot_order(item : OrderByItem) -> OrderByItem {
-  { expr: item.expr.snapshot(), order: item.order }
+  { expr: item.expr.snapshot(), order: item.order, }
 }
 
 ///|
@@ -87,10 +87,10 @@ pub fn SelectStatement::snapshot(self : SelectStatement) -> SelectStatement {
     limit: self.limit.map(Expr::snapshot),
     offset: self.offset.map(Expr::snapshot),
     set_ops: self.set_ops.map(fn(op) {
-      { kind: op.kind, select: op.select.snapshot() }
+      { kind: op.kind, select: op.select.snapshot(), }
     }),
     ctes: self.ctes.map(fn(cte) {
-      { name: cte.name, query: cte.query.snapshot() }
+      { name: cte.name, query: cte.query.snapshot(), }
     }),
   }
 }

@@ -1,3 +1,4 @@
+///|
 /// Builder for UPDATE statements
 pub struct UpdateBuilder {
   table_ : @ast.TableRef
@@ -6,6 +7,7 @@ pub struct UpdateBuilder {
   returning_ : Array[@ast.SelectItem]
 }
 
+///|
 /// Create a new UpdateBuilder for the given table
 pub fn update(table : String) -> UpdateBuilder {
   {
@@ -16,28 +18,36 @@ pub fn update(table : String) -> UpdateBuilder {
   }
 }
 
+///|
 /// Set a column = value assignment
 pub fn UpdateBuilder::set(
   self : UpdateBuilder,
   c : String,
-  val : @ast.Expr
+  val : @ast.Expr,
 ) -> UpdateBuilder {
   self.assignments_.push((c, val))
   self
 }
 
+///|
 /// Add a WHERE condition (AND-combined with existing)
-pub fn UpdateBuilder::where_(self : UpdateBuilder, cond : @ast.Expr) -> UpdateBuilder {
+pub fn UpdateBuilder::where_(
+  self : UpdateBuilder,
+  cond : @ast.Expr,
+) -> UpdateBuilder {
   self.where_ = match self.where_ {
     None => Some(cond)
-    Some(existing) =>
-      Some(@ast.Expr::Binary(existing, @ast.BinOp::And, cond))
+    Some(existing) => Some(@ast.Expr::Binary(existing, @ast.BinOp::And, cond))
   }
   self
 }
 
+///|
 /// Add RETURNING columns
-pub fn UpdateBuilder::returning(self : UpdateBuilder, cols : Array[String]) -> UpdateBuilder {
+pub fn UpdateBuilder::returning(
+  self : UpdateBuilder,
+  cols : Array[String],
+) -> UpdateBuilder {
   for c in cols {
     self.returning_.push(
       @ast.SelectItem::Expr(@ast.Expr::Column(@ast.ColumnRef::Column(c))),
@@ -46,6 +56,7 @@ pub fn UpdateBuilder::returning(self : UpdateBuilder, cols : Array[String]) -> U
   self
 }
 
+///|
 /// Build the UpdateBuilder into a CompiledQuery
 pub fn UpdateBuilder::build(self : UpdateBuilder) -> @ast.CompiledQuery raise {
   if self.assignments_.is_empty() {

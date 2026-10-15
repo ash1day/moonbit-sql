@@ -5,6 +5,13 @@ A PostgreSQL query builder for MoonBit. Published as `ash1day/sql`.
 This README describes `0.2.0`. The `0.1.0` release does not include the
 composition fixes and legacy package removal below.
 
+## Unreleased (next: 0.3.0)
+
+- **Breaking:** `ast` types no longer implement `Show`, whose derive is deprecated.
+  Use `Debug` (`@debug.to_string`) to print an AST, and `CompiledQuery.sql` for SQL.
+- Calling `equal`, `not_equal` and `to_repr` as methods on `ast` types is deprecated.
+  `==`, `!=` and `Debug` are unaffected.
+
 ## Changes in 0.2.0
 
 - **Breaking:** remove `pg` and `decode` from the module and drop their dependencies.
@@ -459,8 +466,7 @@ python3 scripts/check-readme.py
 The module has no third-party MoonBit dependencies. `ast` and `builder` require
 no PostgreSQL server, libpq, or npm packages. Whole-module checks and tests cover
 all four targets; the archived legacy packages are outside the source root.
-Legacy Show implementations remain for source compatibility and can produce
-deprecation warnings on the pinned compiler.
+`moon check` reports no warnings on the pinned compiler.
 
 For execution tests, use a PostgreSQL database where your user can create temporary
 tables. Tests use a transaction and temporary tables, then roll back:

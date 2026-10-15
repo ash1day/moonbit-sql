@@ -7,7 +7,7 @@ priv struct RenderContext {
 
 ///|
 fn RenderContext::new() -> RenderContext {
-  { buf: StringBuilder::new(), params: [], }
+  { buf: StringBuilder(), params: [], }
 }
 
 ///|
@@ -102,10 +102,7 @@ fn render_expr(
     match memo.rendered.search_by(fn(item) { item.0 == expr }) {
       Some(index) => ctx.write(memo.rendered[index].1)
       None => {
-        let part : RenderContext = {
-          buf: StringBuilder::new(),
-          params: ctx.params,
-        }
+        let part : RenderContext = { buf: StringBuilder(), params: ctx.params, }
         render_expr_body(part, expr, grouping~)
         let sql = part.to_sql()
         memo.rendered.push((expr, sql))
